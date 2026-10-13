@@ -32,6 +32,11 @@ router.post(
 
       return;
     }
+    const profile = await ensureProfile(getAuth(req).userId!);
+    if (profile.role !== 'patient') {
+      res.status(403).json({ error: 'Patient access required' });
+      return;
+    }
 
     const parsed = RequestUploadUrlBody.safeParse(req.body);
     if (!parsed.success) {

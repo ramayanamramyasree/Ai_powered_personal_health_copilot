@@ -32,7 +32,7 @@ import {
   translationsTable,
   userProfilesTable,
 } from "@workspace/db";
-import { requireAdmin, requirePatient, type AltrixRequest } from "../lib/altrixAuth";
+import { requireAdmin, requirePatient, requireSignedIn, type AltrixRequest } from "../lib/altrixAuth";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -307,7 +307,7 @@ function normalizeDocumentDate(value: unknown): string | null {
   return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value ? null : value;
 }
 
-router.get("/profile", requirePatient, async (req, res): Promise<void> => {
+router.get("/profile", requireSignedIn, async (req, res): Promise<void> => {
   const profile = asRequest(req).altrixProfile!;
   res.json(
     GetProfileResponse.parse({

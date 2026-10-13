@@ -83,7 +83,7 @@ export async function ensureProfile(userId: string) {
   });
 }
 
-export async function requirePatient(
+export async function requireSignedIn(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -104,12 +104,31 @@ export async function requirePatient(
   }
 }
 
+export async function requirePatient(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await requireSignedIn(req, res, (error?: unknown) => {
+    if (error) {
+      next(error);
+      return;
+    }
+    const profile = (req as AltrixRequest).altrixProfile;
+    if (profile?.role !== "patient") {
+      res.status(403).json({ error: "Patient access required" });
+      return;
+    }
+    next();
+  });
+}
+
 export async function requireAdmin(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  await requirePatient(req, res, (error?: unknown) => {
+  await requireSignedIn(req, res, (error?: unknown) => {
     if (error) {
       next(error);
       return;

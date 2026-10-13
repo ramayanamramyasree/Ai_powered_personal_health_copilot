@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, Show, SignIn, SignUp, useClerk } from '@clerk/react';
+import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import {
@@ -25,7 +25,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
-const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
@@ -92,14 +91,14 @@ function Landing() {
     <header className="landing-nav wrap">
       <Brand />
       <nav className="landing-links"><a href="#how-it-works">How it works</a><a href="#privacy">Your privacy</a></nav>
-      <div className="nav-actions"><Link className="nav-signin" href="/sign-in">Sign in</Link><Link className="btn btn-primary nav-cta" href="/sign-up">Get started <ArrowRight size={16} /></Link></div>
+      <div className="nav-actions"><Link className="nav-signin" href="/login">Sign in</Link><Link className="btn btn-primary nav-cta" href="/patient/register">Get started <ArrowRight size={16} /></Link></div>
     </header>
     <section className="hero wrap">
       <div className="hero-copy fade-up">
         <div className="eyebrow hero-kicker"><span className="live-dot" /> A little more clarity, care by care</div>
         <h1 className="display">Your health story,<br /><em>all in one place.</em></h1>
         <p className="hero-sub">A personal health copilot to help you make sense of your records, keep the important details close, and feel more prepared for what comes next.</p>
-        <div className="hero-actions"><Link className="btn btn-primary" href="/sign-up">Create your private space <ArrowRight size={17} /></Link><span className="hero-note"><LockKeyhole size={14} /> Private to you, always</span></div>
+        <div className="hero-actions"><Link className="btn btn-primary" href="/patient/register">Create your private space <ArrowRight size={17} /></Link><span className="hero-note"><LockKeyhole size={14} /> Private to you, always</span></div>
         <div className="hero-proof"><div className="proof-avatars"><span>A</span><span>M</span><span>R</span></div><p>Built to support your care,<br /><b>not replace your clinician.</b></p></div>
       </div>
       <div className="hero-art fade-up-2">
@@ -130,7 +129,7 @@ function Landing() {
     <section id="privacy" className="privacy-band">
       <div className="wrap privacy-layout"><div className="privacy-seal"><ShieldCheck size={35} strokeWidth={1.5} /><span>PRIVATE<br />BY DESIGN</span></div><div><div className="eyebrow">Your health is personal</div><h2 className="display">A quiet space.<br /><em>On your terms.</em></h2></div><div className="privacy-copy"><p>Your records belong to you. Altrix is here to help you organize and understand them—not to diagnose, prescribe, or make decisions on your behalf.</p><div className="privacy-points"><span><Check size={15} /> No automated medical decisions</span><span><Check size={15} /> Review before confirmation</span><span><Check size={15} /> Built around your consent</span></div></div></div>
     </section>
-    <section className="closing wrap"><div className="closing-card"><div className="closing-sun" /><div className="eyebrow">You deserve to feel informed</div><h2 className="display">Take your next step<br />with a little more <em>confidence.</em></h2><Link className="btn btn-primary" href="/sign-up">Start with Altrix <ArrowRight size={16} /></Link><span className="closing-note">Free to get started · Private by design</span></div></section>
+    <section className="closing wrap"><div className="closing-card"><div className="closing-sun" /><div className="eyebrow">You deserve to feel informed</div><h2 className="display">Take your next step<br />with a little more <em>confidence.</em></h2><Link className="btn btn-primary" href="/patient/register">Start with Altrix <ArrowRight size={16} /></Link><span className="closing-note">Free to get started · Private by design</span></div></section>
     <footer className="landing-footer wrap"><Brand /><span>Altrix Health Copilot <i>·</i> A product by Altrix Labs</span><span>For support, reach out to your care team.</span></footer>
     <EmergencyNotice />
   </main>;
@@ -140,8 +139,40 @@ function EmergencyNotice() {
   return <div className="emergency-banner"><AlertTriangle size={14} /><span><b>Need urgent help?</b> Altrix is not an emergency service. Call your local emergency number or go to the nearest emergency department.</span></div>;
 }
 
-function AuthPage({ signUp = false }: { signUp?: boolean }) {
-  return <div className="auth-screen grain"><div className="auth-side"><Brand dark /><div className="auth-side-copy"><span className="eyebrow">A little more clarity</span><h1 className="display">Your health story,<br /><em>in your hands.</em></h1><p>A private place to bring your records together, understand them, and prepare for the conversations that matter.</p><div className="auth-assurance"><ShieldCheck size={18} /> Patient-led. Private by design.</div></div><div className="auth-side-foot">ALTRIX LABS <span>·</span> HEALTH COPILOT</div></div><div className="auth-form-zone"><div className="auth-mobile-brand"><Brand /></div>{signUp ? <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /> : <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />}<p className="auth-note"><LockKeyhole size={13} /> Your health information is personal. We treat it that way.</p></div><EmergencyNotice /></div>;
+type AccountType = 'patient' | 'admin';
+
+function LoginLanding() {
+  return <main className="login-choice-screen grain">
+    <header className="login-choice-nav wrap"><Brand /><Link href="/" className="login-back-link" data-testid="link-back-home"><ArrowRight size={15} className="back-arrow" /> Back to home</Link></header>
+    <section className="login-choice-content wrap">
+      <div className="login-choice-heading"><div className="eyebrow">ALTRIX HEALTH COPILOT</div><h1 className="display">Welcome to your<br /><em>Altrix space.</em></h1><p>Choose the secure sign-in for your account.</p></div>
+      <div className="login-choice-cards">
+        <article className="login-choice-card soft-card" data-testid="card-patient-login">
+          <span className="login-choice-icon"><HeartHandshake size={23} /></span><div className="eyebrow">YOUR PERSONAL HEALTH SPACE</div>
+          <h2 className="display">Patient login</h2><p>Open your medical records, reports, timeline, and personal settings.</p>
+          <Link href="/patient/login" className="btn btn-primary" data-testid="link-patient-login">Patient login <ArrowRight size={16} /></Link>
+          <span className="login-choice-foot">New to Altrix? <Link href="/patient/register" data-testid="link-patient-registration">Create a patient account</Link></span>
+        </article>
+        <article className="login-choice-card login-choice-admin soft-card" data-testid="card-admin-login">
+          <span className="login-choice-icon"><ShieldCheck size={23} /></span><div className="eyebrow">AUTHORIZED STAFF ONLY</div>
+          <h2 className="display">Administrator</h2><p>For explicitly authorized Altrix administrators managing the care workspace.</p>
+          <Link href="/admin/login" className="btn btn-quiet" data-testid="link-admin-login">Administrator login <ArrowRight size={16} /></Link>
+          <span className="login-choice-foot">Administrator access is assigned by Altrix. There is no public admin registration.</span>
+        </article>
+      </div>
+      <div className="login-choice-privacy"><LockKeyhole size={14} /> Your health information is private and patient-led.</div>
+    </section>
+    <EmergencyNotice />
+  </main>;
+}
+
+function AuthPage({ role = 'patient', signUp = false, signInPath, signUpPath }: { role?: AccountType; signUp?: boolean; signInPath: string; signUpPath: string }) {
+  const isAdmin = role === 'admin';
+  return <div className="auth-screen grain"><div className="auth-side"><Brand dark /><div className="auth-side-copy"><span className="eyebrow">{isAdmin ? 'Authorized access only' : signUp ? 'A little more clarity' : 'Your private health space'}</span><h1 className="display">{isAdmin ? <>Care, at a<br /><em>glance.</em></> : <>Your health story,<br /><em>in your hands.</em></>}</h1><p>{isAdmin ? 'A secure workspace for explicitly authorized Altrix administrators.' : 'A private place to bring your records together, understand them, and prepare for the conversations that matter.'}</p><div className="auth-assurance"><ShieldCheck size={18} /> {isAdmin ? 'Verified administrator access only.' : 'Patient-led. Private by design.'}</div></div><div className="auth-side-foot">ALTRIX LABS <span>·</span> HEALTH COPILOT</div></div><div className={`auth-form-zone ${isAdmin ? 'admin-auth-form-zone' : ''}`}><div className="auth-mobile-brand"><Brand /></div><div className="auth-mode-title"><span className="eyebrow">{isAdmin ? 'ADMINISTRATOR' : 'PATIENT ACCOUNT'}</span><h2 className="display">{signUp ? 'Create your private space' : isAdmin ? 'Administrator sign in' : 'Welcome back'}</h2><p>{isAdmin ? 'Sign in with an authorized administrator account.' : signUp ? 'Your health records stay private to you.' : 'Continue to your health records and timeline.'}</p></div>{signUp ? <SignUp routing="path" path={`${basePath}${signUpPath}`} signInUrl={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}/patient/dashboard`} /> : <SignIn routing="path" path={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} fallbackRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} signUpUrl={isAdmin ? '' : `${basePath}${signUpPath}`} withSignUp={!isAdmin} appearance={isAdmin ? { elements: { footerAction: { display: 'none' } } } : undefined} />}<p className="auth-note"><LockKeyhole size={13} /> {isAdmin ? 'Administrator access is verified on the Altrix server.' : 'Your health information is personal. We treat it that way.'}</p>{!isAdmin && !signUp && <Link className="auth-back-link" href="/patient/register" data-testid="link-patient-registration">New patient? Create an account</Link>}{!signUp && <Link className="auth-back-link" href={isAdmin ? '/login' : '/login'} data-testid="link-auth-back">Back to sign-in choices</Link>}</div><EmergencyNotice /></div>;
+}
+
+function AccessDeniedPage() {
+  return <div className="auth-screen grain"><div className="auth-side"><Brand dark /><div className="auth-side-copy"><span className="eyebrow">Private by design</span><h1 className="display">Your health story,<br /><em>in your hands.</em></h1><p>Access to each Altrix workspace is limited to its intended account type.</p><div className="auth-assurance"><ShieldCheck size={18} /> Patient-led. Private by design.</div></div><div className="auth-side-foot">ALTRIX LABS <span>·</span> HEALTH COPILOT</div></div><div className="auth-form-zone"><div className="auth-mobile-brand"><Brand /></div><section className="auth-denied soft-card" role="alert" data-testid="status-admin-access-denied"><span className="login-choice-icon"><LockKeyhole size={22} /></span><div className="eyebrow">ACCESS NOT AVAILABLE</div><h1 className="display">We can’t open this workspace.</h1><p>These sign-in details are not authorized for this workspace. Use the correct account type or contact your administrator.</p><Link className="btn btn-primary" href="/patient/dashboard" data-testid="link-return-patient-dashboard">Continue to patient space <ArrowRight size={16} /></Link><Link className="auth-back-link" href="/login" data-testid="link-back-login-choices">Back to sign-in choices</Link></section></div><EmergencyNotice /></div>;
 }
 
 function LoadingShell({ label = 'Getting your space ready' }: { label?: string }) {
@@ -542,21 +573,60 @@ function humanType(type: string) { return ({ prescription: 'Prescription', lab_r
 function humanStatus(status: string) { return ({ uploaded: 'Added', processing: 'Processing', review_required: 'Review required', confirmed: 'Confirmed by patient', failed: 'Failed' } as Record<string, string>)[status] || status; }
 
 function RequirePatient() {
-  return <><Show when="signed-in"><PortalPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></>;
+  const auth = useAuth();
+  const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: auth.isLoaded && !!auth.isSignedIn } });
+  if (!auth.isLoaded) return <LoadingShell label="Checking your account" />;
+  if (!auth.isSignedIn) return <Redirect to="/patient/login" />;
+  if (profile.isLoading) return <LoadingShell label="Verifying your patient account" />;
+  if (profile.isError || !profile.data) return <ErrorState message="We couldn’t verify your account. Please try again." />;
+  if (profile.data.role === 'admin') return <Redirect to="/admin/dashboard" />;
+  return <PortalPage />;
 }
 function RequireAdmin() {
-  return <><Show when="signed-in"><AdminPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></>;
+  const auth = useAuth();
+  const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: auth.isLoaded && !!auth.isSignedIn } });
+  if (!auth.isLoaded) return <LoadingShell label="Checking your account" />;
+  if (!auth.isSignedIn) return <Redirect to="/admin/login" />;
+  if (profile.isLoading) return <LoadingShell label="Verifying administrator access" />;
+  if (profile.isError || !profile.data) return <ErrorState message="We couldn’t verify your account. Please try again." />;
+  if (profile.data.role !== 'admin') return <Redirect to="/patient/login?access=denied" />;
+  return <AdminPage />;
 }
-function SignInRoute() { return <AuthPage />; }
-function SignUpRoute() { return <AuthPage signUp />; }
+
+function RoleAuthRoute({ role, signUp = false, signInPath, signUpPath }: { role: AccountType; signUp?: boolean; signInPath: string; signUpPath: string }) {
+  const auth = useAuth();
+  const [location] = useLocation();
+  const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: auth.isLoaded && !!auth.isSignedIn } });
+  if (!auth.isLoaded) return <LoadingShell label="Checking your account" />;
+  if (auth.isSignedIn) {
+    if (profile.isLoading) return <LoadingShell label="Verifying your account" />;
+    if (profile.isError || !profile.data) return <ErrorState message="We couldn’t verify your account. Please try again." />;
+    if (role === 'admin' && profile.data.role !== 'admin') return <AccessDeniedPage />;
+    if (role === 'patient' && location.includes('access=denied')) return <AccessDeniedPage />;
+    return <Redirect to={profile.data.role === 'admin' ? '/admin/dashboard' : '/patient/dashboard'} />;
+  }
+  return <AuthPage role={role} signUp={signUp} signInPath={signInPath} signUpPath={signUpPath} />;
+}
+
+function PatientLoginRoute() { return <RoleAuthRoute role="patient" signInPath="/patient/login" signUpPath="/patient/register" />; }
+function AdminLoginRoute() { return <RoleAuthRoute role="admin" signInPath="/admin/login" signUpPath="/patient/register" />; }
+function PatientRegisterRoute() { return <RoleAuthRoute role="patient" signUp signInPath="/patient/login" signUpPath="/patient/register" />; }
+function LegacySignInRoute() { return <RoleAuthRoute role="patient" signInPath="/sign-in" signUpPath="/patient/register" />; }
+function LegacySignUpRoute() { return <RoleAuthRoute role="patient" signUp signInPath="/patient/login" signUpPath="/sign-up" />; }
 function AppRouter() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Switch>
     <Route path="/" component={HomeRedirect} />
-    <Route path="/sign-in/*?" component={SignInRoute} />
-    <Route path="/sign-up/*?" component={SignUpRoute} />
-    <Route path="/portal" component={RequirePatient} />
-    <Route path="/admin" component={RequireAdmin} />
+    <Route path="/login" component={LoginLanding} />
+    <Route path="/patient/login/*?" component={PatientLoginRoute} />
+    <Route path="/admin/login/*?" component={AdminLoginRoute} />
+    <Route path="/patient/register/*?" component={PatientRegisterRoute} />
+    <Route path="/patient/dashboard" component={RequirePatient} />
+    <Route path="/admin/dashboard" component={RequireAdmin} />
+    <Route path="/portal" component={() => <Redirect to="/patient/dashboard" />} />
+    <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />
+    <Route path="/sign-in/*?" component={LegacySignInRoute} />
+    <Route path="/sign-up/*?" component={LegacySignUpRoute} />
     <Route component={NotFound} />
   </Switch></ErrorBoundary>;
 }
@@ -565,12 +635,18 @@ function ClerkApp() {
   const [, setLocation] = useLocation();
   if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={import.meta.env.VITE_CLERK_PROXY_URL} appearance={clerkAppearance}
-    signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}
+    signInUrl={`${basePath}/patient/login`} signUpUrl={`${basePath}/patient/register`}
     localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Your health story is right where you left it.' } }, signUp: { start: { title: 'Make space for your health', subtitle: 'Create your private Altrix account.' } } }}
     routerPush={(to) => setLocation(stripBase(to))}
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}>
-    <QueryClientProvider client={queryClient}><TooltipProvider><AppRouter /><Toaster /></TooltipProvider></QueryClientProvider>
+    <IdentityScopedApp />
   </ClerkProvider>;
+}
+
+function IdentityScopedApp() {
+  const { isLoaded, userId } = useAuth();
+  const queryClient = useMemo(() => new QueryClient(), [isLoaded, userId]);
+  return <QueryClientProvider client={queryClient}><TooltipProvider><AppRouter /><Toaster /></TooltipProvider></QueryClientProvider>;
 }
 
 function App() {
