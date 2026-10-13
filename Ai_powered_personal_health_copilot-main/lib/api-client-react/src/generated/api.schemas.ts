@@ -17,6 +17,7 @@ export const ProfileLocale = {
   hi: 'hi',
   ta: 'ta',
   te: 'te',
+  kn: 'kn',
 } as const;
 
 export type ProfileRole = typeof ProfileRole[keyof typeof ProfileRole];
@@ -44,6 +45,7 @@ export const ProfileUpdateLocale = {
   hi: 'hi',
   ta: 'ta',
   te: 'te',
+  kn: 'kn',
 } as const;
 
 export interface ProfileUpdate {
@@ -131,6 +133,7 @@ export const DocumentAnalysisInputLocale = {
   hi: 'hi',
   ta: 'ta',
   te: 'te',
+  kn: 'kn',
 } as const;
 
 export interface DocumentAnalysisInput {
@@ -147,6 +150,7 @@ export const DocumentConfirmationSummaryLocale = {
   hi: 'hi',
   ta: 'ta',
   te: 'te',
+  kn: 'kn',
 } as const;
 
 export interface DocumentConfirmation {
@@ -194,46 +198,87 @@ export interface PatientFeedback {
 
 export interface TranslationDictionary {[key: string]: string}
 
-export type AdminOverviewMonthlyUsersItem = {
-  month: string;
+export type LanguageCode = typeof LanguageCode[keyof typeof LanguageCode];
+
+
+export const LanguageCode = {
+  en: 'en',
+  hi: 'hi',
+  ta: 'ta',
+  te: 'te',
+  kn: 'kn',
+} as const;
+
+export interface Language {
+  id: string;
+  name: string;
+  code: LanguageCode;
+  nativeName: string;
+  enabled: boolean;
+}
+
+export type AdminOverviewDailyRegistrationsItem = {
+  period: string;
   count: number;
 };
 
-export type AdminOverviewDocumentTypesItem = {
-  type: string;
+export type AdminOverviewWeeklyRegistrationsItem = {
+  period: string;
+  count: number;
+};
+
+export type AdminOverviewMonthlyRegistrationsItem = {
+  period: string;
   count: number;
 };
 
 export interface AdminOverview {
+  totalUsers: number;
   totalPatients: number;
-  activeThisMonth: number;
-  totalDocuments: number;
-  pendingReviews: number;
-  averageRating: number;
-  feedbackCount: number;
-  monthlyUsers: AdminOverviewMonthlyUsersItem[];
-  documentTypes: AdminOverviewDocumentTypesItem[];
+  totalAdmins: number;
+  registrationsToday: number;
+  registrationsThisWeek: number;
+  registrationsThisMonth: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  dailyRegistrations: AdminOverviewDailyRegistrationsItem[];
+  weeklyRegistrations: AdminOverviewWeeklyRegistrationsItem[];
+  monthlyRegistrations: AdminOverviewMonthlyRegistrationsItem[];
 }
 
-export interface AdminPatient {
+export type AdminUserRole = typeof AdminUserRole[keyof typeof AdminUserRole];
+
+
+export const AdminUserRole = {
+  patient: 'patient',
+  admin: 'admin',
+} as const;
+
+export type AdminUserStatus = typeof AdminUserStatus[keyof typeof AdminUserStatus];
+
+
+export const AdminUserStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  locale: string;
+  role: AdminUserRole;
   createdAt: string;
-  documentCount: number;
+  lastSeenAt: string;
+  status: AdminUserStatus;
 }
 
-export type AdminDocument = MedicalDocument & {
-  patientName: string;
-  patientEmail: string;
-  objectPath?: string;
-};
-
-export type AdminFeedback = PatientFeedback & {
-  patientName: string;
-  patientEmail: string;
-};
+export interface AdminUsersPage {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 export type UploadUrlRequestContentType = typeof UploadUrlRequestContentType[keyof typeof UploadUrlRequestContentType];
 
@@ -264,4 +309,60 @@ export interface UploadUrlResponse {
   objectPath: string;
   metadata?: UploadUrlRequest;
 }
+
+export type ListAdminUsersParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+/**
+ * @maxLength 200
+ */
+search?: string;
+role?: ListAdminUsersRole;
+status?: ListAdminUsersStatus;
+sortBy?: ListAdminUsersSortBy;
+sortOrder?: ListAdminUsersSortOrder;
+};
+
+export type ListAdminUsersRole = typeof ListAdminUsersRole[keyof typeof ListAdminUsersRole];
+
+
+export const ListAdminUsersRole = {
+  patient: 'patient',
+  admin: 'admin',
+} as const;
+
+export type ListAdminUsersStatus = typeof ListAdminUsersStatus[keyof typeof ListAdminUsersStatus];
+
+
+export const ListAdminUsersStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export type ListAdminUsersSortBy = typeof ListAdminUsersSortBy[keyof typeof ListAdminUsersSortBy];
+
+
+export const ListAdminUsersSortBy = {
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  role: 'role',
+  createdAt: 'createdAt',
+  lastSeenAt: 'lastSeenAt',
+} as const;
+
+export type ListAdminUsersSortOrder = typeof ListAdminUsersSortOrder[keyof typeof ListAdminUsersSortOrder];
+
+
+export const ListAdminUsersSortOrder = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
 

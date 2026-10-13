@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './adminDocument';
-export * from './adminFeedback';
 export * from './adminOverview';
-export * from './adminOverviewDocumentTypesItem';
-export * from './adminOverviewMonthlyUsersItem';
-export * from './adminPatient';
+export * from './adminOverviewDailyRegistrationsItem';
+export * from './adminOverviewMonthlyRegistrationsItem';
+export * from './adminOverviewWeeklyRegistrationsItem';
+export * from './adminUser';
+export * from './adminUserRole';
+export * from './adminUsersPage';
+export * from './adminUserStatus';
 export * from './documentAnalysisInput';
 export * from './documentAnalysisInputLocale';
 export * from './documentConfirmation';
@@ -20,6 +22,13 @@ export * from './documentConfirmationSummaryLocale';
 export * from './feedbackInput';
 export * from './feedbackInputCategory';
 export * from './healthStatus';
+export * from './language';
+export * from './languageCode';
+export * from './listAdminUsersParams';
+export * from './listAdminUsersRole';
+export * from './listAdminUsersSortBy';
+export * from './listAdminUsersSortOrder';
+export * from './listAdminUsersStatus';
 export * from './medicalDocument';
 export * from './medicalDocumentDocumentType';
 export * from './medicalDocumentExtraction';

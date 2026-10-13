@@ -221,7 +221,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [en, hi, ta, te]
+            enum: [en, hi, ta, te, kn]
       responses:
         "200":
           description: Translation dictionary
@@ -229,6 +229,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TranslationDictionary"
+  /languages:
+    get:
+      operationId: listLanguages
+      tags: [translations]
+      summary: List enabled application languages
+      responses:
+        "200":
+          description: Enabled language records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Language"
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -251,62 +265,50 @@ paths:
     get:
       operationId: getAdminOverview
       tags: [admin]
-      summary: Get aggregate patient, document, and feedback analytics
+      summary: Get database-derived user registration analytics
       responses:
         "200":
-          description: Admin analytics overview
+          description: User registration analytics
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminOverview"
         "403":
           description: Admin access required
-  /admin/patients:
+  /admin/users:
     get:
-      operationId: listAdminPatients
+      operationId: listAdminUsers
       tags: [admin]
-      summary: List patient profiles and record counts for the authorized admin
+      summary: List user registration records for the authorized admin
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 200 }
+        - name: role
+          in: query
+          schema: { type: string, enum: [patient, admin] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, inactive] }
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [id, name, email, role, createdAt, lastSeenAt], default: createdAt }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
       responses:
         "200":
-          description: Patient list
+          description: Paginated user registration records
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdminPatient"
-        "403":
-          description: Admin access required
-  /admin/documents:
-    get:
-      operationId: listAdminDocuments
-      tags: [admin]
-      summary: List patient medical documents for the authorized admin
-      responses:
-        "200":
-          description: Patient document list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdminDocument"
-        "403":
-          description: Admin access required
-  /admin/feedback:
-    get:
-      operationId: listAdminFeedback
-      tags: [admin]
-      summary: Review feedback submitted by patients
-      responses:
-        "200":
-          description: Patient feedback
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AdminFeedback"
+                $ref: "#/components/schemas/AdminUsersPage"
         "403":
           description: Admin access required
 components:
@@ -325,14 +327,14 @@ components:
         id: { type: string }
         email: { type: string }
         name: { type: string }
-        locale: { type: string, enum: [en, hi, ta, te] }
+        locale: { type: string, enum: [en, hi, ta, te, kn] }
         role: { type: string, enum: [patient, admin] }
         createdAt: { type: string, format: date-time }
     ProfileUpdate:
       type: object
       required: [locale]
       properties:
-        locale: { type: string, enum: [en, hi, ta, te] }
+        locale: { type: string, enum: [en, hi, ta, te, kn] }
     MedicalDocument:
       type: object
       required: [id, fileName, documentType, status, createdAt]
@@ -360,14 +362,14 @@ components:
       type: object
       required: [locale]
       properties:
-        locale: { type: string, enum: [en, hi, ta, te] }
+        locale: { type: string, enum: [en, hi, ta, te, kn] }
     DocumentConfirmation:
       type: object
       required: [extraction, summary, summaryLocale]
       properties:
         extraction: { type: object, additionalProperties: true }
         summary: { type: string, minLength: 1, maxLength: 10000 }
-        summaryLocale: { type: string, enum: [en, hi, ta, te] }
+        summaryLocale: { type: string, enum: [en, hi, ta, te, kn] }
     FeedbackInput:
       type: object
       required: [message]
@@ -388,59 +390,74 @@ components:
       type: object
       additionalProperties:
         type: string
+    Language:
+      type: object
+      required: [id, name, code, nativeName, enabled]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        code: { type: string, enum: [en, hi, ta, te, kn] }
+        nativeName: { type: string }
+        enabled: { type: boolean }
     AdminOverview:
       type: object
-      required: [totalPatients, activeThisMonth, totalDocuments, pendingReviews, averageRating, feedbackCount, monthlyUsers, documentTypes]
+      required: [totalUsers, totalPatients, totalAdmins, registrationsToday, registrationsThisWeek, registrationsThisMonth, activeUsers, inactiveUsers, dailyRegistrations, weeklyRegistrations, monthlyRegistrations]
       properties:
+        totalUsers: { type: integer }
         totalPatients: { type: integer }
-        activeThisMonth: { type: integer }
-        totalDocuments: { type: integer }
-        pendingReviews: { type: integer }
-        averageRating: { type: number }
-        feedbackCount: { type: integer }
-        monthlyUsers:
+        totalAdmins: { type: integer }
+        registrationsToday: { type: integer }
+        registrationsThisWeek: { type: integer }
+        registrationsThisMonth: { type: integer }
+        activeUsers: { type: integer }
+        inactiveUsers: { type: integer }
+        dailyRegistrations:
           type: array
           items:
             type: object
-            required: [month, count]
+            required: [period, count]
             properties:
-              month: { type: string }
+              period: { type: string }
               count: { type: integer }
-        documentTypes:
+        weeklyRegistrations:
           type: array
           items:
             type: object
-            required: [type, count]
+            required: [period, count]
             properties:
-              type: { type: string }
+              period: { type: string }
               count: { type: integer }
-    AdminPatient:
+        monthlyRegistrations:
+          type: array
+          items:
+            type: object
+            required: [period, count]
+            properties:
+              period: { type: string }
+              count: { type: integer }
+    AdminUser:
       type: object
-      required: [id, email, name, locale, createdAt, documentCount]
+      required: [id, email, name, role, createdAt, lastSeenAt, status]
       properties:
         id: { type: string }
         email: { type: string }
         name: { type: string }
-        locale: { type: string }
+        role: { type: string, enum: [patient, admin] }
         createdAt: { type: string, format: date-time }
-        documentCount: { type: integer }
-    AdminDocument:
-      allOf:
-        - $ref: "#/components/schemas/MedicalDocument"
-        - type: object
-          required: [patientName, patientEmail]
-          properties:
-            patientName: { type: string }
-            patientEmail: { type: string }
-            objectPath: { type: string }
-    AdminFeedback:
-      allOf:
-        - $ref: "#/components/schemas/PatientFeedback"
-        - type: object
-          required: [patientName, patientEmail]
-          properties:
-            patientName: { type: string }
-            patientEmail: { type: string }
+        lastSeenAt: { type: string, format: date-time }
+        status: { type: string, enum: [active, inactive] }
+    AdminUsersPage:
+      type: object
+      required: [users, total, page, pageSize, totalPages]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
     UploadUrlRequest:
       type: object
       required: [name, size, contentType]
@@ -456,4 +473,3 @@ components:
         objectPath: { type: string }
         metadata:
           $ref: "#/components/schemas/UploadUrlRequest"
-

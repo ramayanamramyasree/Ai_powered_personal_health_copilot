@@ -20,7 +20,10 @@ export async function ensureProfile(userId: string) {
   const verified = Boolean(primary?.verification?.status === "verified");
   const configuredAdminEmail = process.env.ALTRIX_ADMIN_EMAIL?.trim().toLowerCase();
   const eligibleForAdmin = Boolean(
-    configuredAdminEmail && verified && email === configuredAdminEmail,
+    configuredAdminEmail &&
+      verified &&
+      email === configuredAdminEmail &&
+      identity.publicMetadata?.["altrixRole"] === "admin",
   );
   const name =
     [identity.firstName, identity.lastName].filter(Boolean).join(" ") ||
@@ -39,24 +42,20 @@ export async function ensureProfile(userId: string) {
       .where(eq(userProfilesTable.role, "admin"))
       .limit(1);
 
-    let role = "patient";
-    if (
-      eligibleForAdmin &&
-      (!currentAdmin || currentAdmin.id === userId || currentAdmin.email === email)
-    ) {
+    let role = existing?.role === "admin" ? "admin" : "patient";
+    if (eligibleForAdmin) {
+      if (currentAdmin && currentAdmin.id !== userId) {
+        await tx
+          .update(userProfilesTable)
+          .set({ role: "patient" })
+          .where(
+            and(
+              eq(userProfilesTable.id, currentAdmin.id),
+              eq(userProfilesTable.role, "admin"),
+            ),
+          );
+      }
       role = "admin";
-    }
-
-    if (currentAdmin && currentAdmin.id !== userId && currentAdmin.email !== configuredAdminEmail) {
-      await tx
-        .update(userProfilesTable)
-        .set({ role: "patient" })
-        .where(
-          and(
-            eq(userProfilesTable.id, currentAdmin.id),
-            eq(userProfilesTable.role, "admin"),
-          ),
-        );
     }
 
     const [profile] = await tx

@@ -11,22 +11,27 @@ import {
 } from 'lucide-react';
 import { Route, Switch, Redirect, Router as WouterRouter, useLocation, Link } from 'wouter';
 import {
-  getHealthCheckQueryKey, getGetProfileQueryKey, getGetTranslationsQueryKey, getListDocumentsQueryKey,
-  getListMyFeedbackQueryKey, getGetAdminOverviewQueryKey, getListAdminPatientsQueryKey,
-  getListAdminDocumentsQueryKey, getListAdminFeedbackQueryKey, getGetDocumentQueryKey,
-  useHealthCheck, useGetProfile, useGetTranslations, useListDocuments, useGetDocument, useCreateDocument, useRequestUploadUrl,
+  getHealthCheckQueryKey, getGetProfileQueryKey, getGetTranslationsQueryKey, getListLanguagesQueryKey, getListDocumentsQueryKey,
+  getListMyFeedbackQueryKey, getGetAdminOverviewQueryKey, getListAdminUsersQueryKey, getGetDocumentQueryKey,
+  useHealthCheck, useGetProfile, useGetTranslations, useListLanguages, useListDocuments, useGetDocument, useCreateDocument, useRequestUploadUrl,
   useAnalyzeDocument, useConfirmDocument, useDeleteDocument, useUpdateProfile,
-  useListMyFeedback, useCreateFeedback, useGetAdminOverview, useListAdminPatients,
-  useListAdminDocuments, useListAdminFeedback,
+  useListMyFeedback, useCreateFeedback, useGetAdminOverview, useListAdminUsers,
 } from '@workspace/api-client-react';
-import type { MedicalDocument, Profile } from '@workspace/api-client-react';
+import type { AdminOverview, Language, LanguageCode, ListAdminUsersParams, MedicalDocument, Profile } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const configuredClerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim();
+const hostname = window.location.hostname.toLowerCase();
+const isLocalhost = hostname === 'localhost' || hostname.endsWith('.localhost');
+const clerkPubKey = configuredClerkPubKey
+  ? isLocalhost
+    ? configuredClerkPubKey
+    : publishableKeyFromHost(hostname, configuredClerkPubKey)
+  : undefined;
 
 function stripBase(path: string) {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
@@ -183,9 +188,16 @@ function ErrorState({ retry, message = 'We couldn’t load this just now.' }: { 
   return <div className="error-state"><span className="error-icon"><CircleHelp size={21} /></span><b>Let’s try that again</b><p>{message}</p>{retry && <button className="btn btn-quiet" onClick={retry} data-testid="button-retry">Try again</button>}</div>;
 }
 
-type Locale = 'en' | 'hi' | 'ta' | 'te';
+type Locale = LanguageCode;
 type Translate = (key: string, fallback?: string) => string;
-const languages: Record<Locale, string> = { en: 'English', hi: 'हिन्दी', ta: 'தமிழ்', te: 'తెలుగు' };
+const fallbackLanguages: Language[] = [
+  { id: 'en', code: 'en', name: 'English', nativeName: 'English', enabled: true },
+  { id: 'hi', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', enabled: true },
+  { id: 'ta', code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', enabled: true },
+  { id: 'te', code: 'te', name: 'Telugu', nativeName: 'తెలుగు', enabled: true },
+  { id: 'kn', code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', enabled: true },
+];
+const languages: Record<Locale, string> = { en: 'English', hi: 'हिन्दी', ta: 'தமிழ்', te: 'తెలుగు', kn: 'ಕನ್ನಡ' };
 const labels: Record<string, string> = {
   greeting: 'Good to see you', documents: 'My health records', timeline: 'Your timeline',
   upload: 'Add a record', summary: 'A clearer summary', review: 'Needs your review',
@@ -197,29 +209,36 @@ const labels: Record<string, string> = {
 
 function AppShell({ children, profile, active = 'portal', translate = (_key, fallback) => fallback || _key }: { children: ReactNode; profile: Profile; active?: string; translate?: Translate }) {
   const { signOut } = useClerk();
-  const health = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey() } });
+  const health = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey(), enabled: profile.role === 'patient' } });
   const [menuOpen, setMenuOpen] = useState(false);
   return <div className="app-layout">
     <aside className={`app-sidebar ${menuOpen ? 'mobile-open' : ''}`}><div className="side-brand"><Brand dark /><button className="mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
-      <div className="side-caption">{translate('your_space', 'YOUR SPACE')}</div>
-      <Link href="/portal" className={`side-link ${active === 'portal' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}><LayoutDashboard size={18} /> {translate('overview', 'Overview')}</Link>
-      {profile.role === 'admin' && <Link href="/admin" className={`side-link ${active === 'admin' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}><BarChart3 size={18} /> {translate('lab_overview', 'Lab overview')}</Link>}
-      <div className="side-bottom"><div className="side-security"><ShieldCheck size={17} /><span><b>{translate('privacy_ownership', 'Your information stays yours')}</b><small>{translate('private_patient_led', 'Private and patient-led')}</small></span></div>
+      {profile.role === 'admin' ? <>
+        <div className="side-caption">USER MANAGEMENT</div>
+        <a href="#user-analytics" className="side-link" onClick={() => setMenuOpen(false)}><BarChart3 size={18} /> User Analytics</a>
+        <a href="#user-records" className="side-link" onClick={() => setMenuOpen(false)}><Users size={18} /> User Records</a>
+      </> : <>
+        <div className="side-caption">{translate('your_space', 'YOUR SPACE')}</div>
+        <Link href="/portal" className={`side-link ${active === 'portal' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}><LayoutDashboard size={18} /> {translate('overview', 'Overview')}</Link>
+        <Link href="/patient/dashboard#settings" className="side-link" onClick={() => setMenuOpen(false)}><Languages size={18} /> {translate('settings', 'Settings')}</Link>
+      </>}
+      <div className="side-bottom">{profile.role === 'patient' && <div className="side-security"><ShieldCheck size={17} /><span><b>{translate('privacy_ownership', 'Your information stays yours')}</b><small>{translate('private_patient_led', 'Private and patient-led')}</small></span></div>}
         <button className="profile-switch" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out"><span className="profile-avatar">{(profile.name || profile.email || 'A')[0].toUpperCase()}</span><span className="profile-meta"><b>{profile.name || 'Your account'}</b><small>{profile.email}</small></span><LogOut size={16} /></button>
       </div>
     </aside>
     {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="app-main"><header className="app-topbar"><button className="mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div><span className="topbar-kicker">ALTRIX HEALTH COPILOT</span><span className="topbar-date">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</span></div><div className="topbar-right"><span className="topbar-private"><span className="live-dot" /> {health.isError ? 'Connection unavailable' : health.data ? 'Private space · connected' : 'Private space'}</span><span className="topbar-initial">{(profile.name || 'A')[0].toUpperCase()}</span></div></header><main className="app-content">{children}</main></div>
+    <div className="app-main"><header className="app-topbar"><button className="mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div><span className="topbar-kicker">ALTRIX HEALTH COPILOT</span><span className="topbar-date">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</span></div><div className="topbar-right">{profile.role === 'patient' && <span className="topbar-private"><span className="live-dot" /> {health.isError ? translate('connection_unavailable', 'Connection unavailable') : health.data ? translate('private_space_connected', 'Private space · connected') : translate('private_space', 'Private space')}</span>}<span className="topbar-initial">{(profile.name || 'A')[0].toUpperCase()}</span></div></header><main className="app-content">{children}</main></div>
   </div>;
 }
 
 function PortalPage() {
   const queryClient = useQueryClient();
   const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useGetProfile();
-  const [localeDraft, setLocaleDraft] = useState<Locale>('en');
-  const locale = (localeDraft || profile?.locale || 'en') as Locale;
+  const [localeDraft, setLocaleDraft] = useState<Locale | null>(null);
+  const locale = localeDraft ?? (profile?.locale as Locale | undefined) ?? 'en';
+  const languageList = useListLanguages({ query: { queryKey: getListLanguagesQueryKey(), enabled: !!profile } });
   const translations = useGetTranslations(locale, { query: { queryKey: getGetTranslationsQueryKey(locale), enabled: !!profile } });
-  const tr: Translate = (key, fallback) => translations.data?.[key] || labels[key] || fallback || key;
+  const tr: Translate = (key, fallback) => translations.data?.[key] || fallback || labels[key] || key.replace(/[_-]+/g, ' ');
   const docs = useListDocuments({ query: { queryKey: getListDocumentsQueryKey(), enabled: !!profile } });
   const feedback = useListMyFeedback({ query: { queryKey: getListMyFeedbackQueryKey(), enabled: !!profile } });
   const uploadUrl = useRequestUploadUrl();
@@ -233,6 +252,7 @@ function PortalPage() {
   const [documentType, setDocumentType] = useState<'prescription' | 'lab_report' | 'discharge_summary' | 'diagnostic_report' | 'other'>('lab_report');
   const [uploadMessage, setUploadMessage] = useState('');
   const [uploadFailed, setUploadFailed] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [extractionDraft, setExtractionDraft] = useState('{}');
   const [reviewed, setReviewed] = useState(false);
@@ -243,11 +263,20 @@ function PortalPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (profile) setLocaleDraft(profile.locale as Locale); }, [profile?.locale]);
+  const isArray = <T>(value: unknown): value is T[] => Array.isArray(value);
+
   useEffect(() => {
-    if (docs.data?.length && (!selectedId || !docs.data.some((d) => d.id === selectedId))) setSelectedId(docs.data[0].id);
+    if (isArray(docs.data) && docs.data.length) {
+      if (!selectedId || !docs.data.some((d) => d.id === selectedId)) {
+        setSelectedId(docs.data[0].id);
+      }
+    }
   }, [docs.data, selectedId]);
-  const selectedDetail = useGetDocument(selectedId || '', { query: { enabled: !!selectedId, queryKey: getGetDocumentQueryKey(selectedId || '') } });
-  const selected = selectedDetail.data || docs.data?.find((doc) => doc.id === selectedId);
+
+  const selectedDetail = useGetDocument(selectedId || '', {
+    query: { enabled: !!selectedId, queryKey: getGetDocumentQueryKey(selectedId || '') },
+  });
+  const selected = selectedDetail.data ?? (isArray(docs.data) ? docs.data.find((doc) => doc.id === selectedId) : undefined);
   useEffect(() => {
     if (selected) {
       setSummaryDraft(selected.translatedSummary && selected.summaryLocale === locale ? selected.translatedSummary : selected.summary || '');
@@ -260,7 +289,10 @@ function PortalPage() {
   const onLocaleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value as Locale;
     setLocaleDraft(value);
-    updateProfile.mutate({ data: { locale: value } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() }), onError: () => setLocaleDraft(profile?.locale || 'en') });
+    updateProfile.mutate({ data: { locale: value } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() }),
+      onError: () => setLocaleDraft((profile?.locale as Locale | undefined) || 'en'),
+    });
   };
   const onUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -268,6 +300,7 @@ function PortalPage() {
     setUploadMessage('');
     setUploadFailed(false);
     if (file.size > 15_000_000) { setUploadMessage('This file is larger than 15 MB. Please choose a smaller one.'); setUploadFailed(true); event.target.value = ''; return; }
+    setUploading(true);
     try {
       const contentType = await detectMedicalFileType(file);
       const { uploadURL, objectPath } = await uploadUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType } });
@@ -278,7 +311,7 @@ function PortalPage() {
       setSelectedId(created.id);
       setUploadMessage('Your record is safely added. You can ask Altrix to prepare a draft summary.');
     } catch (error) { setUploadMessage(error instanceof Error ? error.message : 'Upload didn’t work. Please try again.'); setUploadFailed(true); }
-    finally { event.target.value = ''; }
+    finally { setUploading(false); event.target.value = ''; }
   };
   const analyzeSelected = () => {
     if (!selected) return;
@@ -288,6 +321,9 @@ function PortalPage() {
       setSummaryDraft(doc.translatedSummary || doc.summary || '');
       setExtractionDraft(JSON.stringify(doc.extraction || {}, null, 2));
       setReviewed(false);
+    }, onError: () => {
+      invalidateDocuments();
+      queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(selected.id) });
     } });
   };
   const confirmSelected = () => {
@@ -318,14 +354,16 @@ function PortalPage() {
   if (pageLoading) return <LoadingShell />;
 
   return <AppShell profile={profile} translate={tr}>
-    <div className="welcome-row fade-up"><div><div className="eyebrow">{tr('personal_health_space', 'YOUR PERSONAL HEALTH SPACE')}</div><h1 className="display">{tr('greeting')}{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.</h1><p>{tr('records_together', 'Everything you’ve shared, together in one place.')}</p></div><label className="locale-control"><Languages size={17} /><span className="sr-only">{tr('language')}</span><select aria-label={tr('language')} value={locale} onChange={onLocaleChange} data-testid="select-language">{Object.entries(languages).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select><ChevronDown size={15} /></label></div>
+    <div className="welcome-row fade-up"><div><div className="eyebrow">{tr('personal_health_space', 'YOUR PERSONAL HEALTH SPACE')}</div><h1 className="display">{tr('greeting')}{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.</h1><p>{tr('records_together', 'Everything you’ve shared, together in one place.')}</p></div><label className="locale-control" id="settings"><Languages size={17} /><span className="sr-only">{tr('language')}</span><select aria-label={tr('language')} value={locale} onChange={onLocaleChange} disabled={languageList.isLoading || languageList.isError || updateProfile.isPending} data-testid="select-language">{(languageList.data?.length ? languageList.data : fallbackLanguages).map((language) => <option key={language.code} value={language.code}>{language.nativeName === language.name ? language.name : `${language.nativeName} (${language.name})`}</option>)}</select><ChevronDown size={15} /></label></div>
+    {languageList.isError && <p className="error-text" role="alert">{tr('language_list_error', 'Available languages could not be loaded. Please refresh and try again.')}</p>}
+    {updateProfile.isError && <p className="error-text" role="alert">{tr('language_save_error', 'Your language preference could not be saved. Please try again.')}</p>}
     <div className="urgent-callout"><span className="urgent-icon"><HeartHandshake size={17} /></span><div><b>{tr('gentle_reminder', 'A gentle reminder')}</b><p>{tr('urgent')}</p></div><button onClick={() => setFeedbackOpen(true)} data-testid="button-contact-support"><MessageSquareText size={15} /> {tr('feedback', 'Feedback')}</button></div>
     {docs.isError && <ErrorState retry={() => docs.refetch()} message="Your records couldn’t be loaded. They’re still safe—please try again." />}
     <section className="portal-grid">
       <div className="portal-primary">
         <section className="upload-card soft-card">
           <div className="upload-card-head"><div><div className="eyebrow">{tr('start_with_record', 'START WITH A RECORD')}</div><h2 className="display">{tr('upload')}</h2><p>{tr('upload_explanation', 'Bring a report, prescription, or discharge summary into your timeline.')}</p></div><span className="upload-emblem"><UploadCloud size={23} /></span></div>
-          <div className="upload-controls"><label className="type-select"><span className="label">{tr('document_type', 'What kind of record?')}</span><select className="field" value={documentType} onChange={(e) => setDocumentType(e.target.value as typeof documentType)} data-testid="select-document-type"><option value="lab_report">{tr('lab_report', 'Lab report')}</option><option value="prescription">{tr('prescription', 'Prescription')}</option><option value="discharge_summary">{tr('discharge_summary', 'Discharge summary')}</option><option value="diagnostic_report">{tr('diagnostic_report', 'Diagnostic report')}</option><option value="other">{tr('other', 'Other')}</option></select></label><input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={onUpload} className="sr-only" data-testid="input-medical-file" /><button onClick={() => fileRef.current?.click()} disabled={uploadUrl.isPending || createDoc.isPending} className="btn btn-primary upload-button" data-testid="button-upload-record">{uploadUrl.isPending || createDoc.isPending ? <span className="tiny-loader" /> : <Plus size={17} />}{uploadUrl.isPending || createDoc.isPending ? tr('adding_record', 'Adding record…') : tr('choose_file', 'Choose a file')}</button></div>
+          <div className="upload-controls"><label className="type-select"><span className="label">{tr('document_type', 'What kind of record?')}</span><select className="field" value={documentType} onChange={(e) => setDocumentType(e.target.value as typeof documentType)} data-testid="select-document-type"><option value="lab_report">{tr('lab_report', 'Lab report')}</option><option value="prescription">{tr('prescription', 'Prescription')}</option><option value="discharge_summary">{tr('discharge_summary', 'Discharge summary')}</option><option value="diagnostic_report">{tr('diagnostic_report', 'Diagnostic report')}</option><option value="other">{tr('other', 'Other')}</option></select></label><input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={onUpload} className="sr-only" data-testid="input-medical-file" /><button onClick={() => fileRef.current?.click()} disabled={uploading || uploadUrl.isPending || createDoc.isPending} className="btn btn-primary upload-button" data-testid="button-upload-record">{uploading || uploadUrl.isPending || createDoc.isPending ? <span className="tiny-loader" /> : <Plus size={17} />}{uploading || uploadUrl.isPending || createDoc.isPending ? tr('adding_record', 'Adding record…') : tr('choose_file', 'Choose a file')}</button></div>
           <div className="upload-meta"><span><LockKeyhole size={13} /> {tr('private_secure', 'Private and secure')}</span><span>{tr('supported_file_types', 'PDF, JPG, PNG or WEBP · up to 15 MB')}</span></div>
           {uploadMessage && <div className={`inline-message ${uploadFailed ? 'message-error' : ''}`} role="status">{uploadMessage}</div>}
         </section>
@@ -405,7 +443,7 @@ function HealthProfileCard({ translate, locale, documents }: { translate: Transl
         readFactText(lab?.referenceRange) ? `${translate('reference_range', 'Reference range')}: ${readFactText(lab?.referenceRange)}` : '',
         readFactText(lab?.flag) ? `${translate('source_flag', 'Report flag')}: ${readFactText(lab?.flag)}` : '',
       ].filter(Boolean);
-      groups[1].facts.push({ id: `${doc.id}-lab-${index}`, title, details, date });
+      groups[1].facts.push({ id: `${doc.id}-lab-${index}`, title, details, date, uncertain: lab?.uncertain === true });
     }
 
     const terms = Array.isArray(extraction.diagnosesOrTerms) ? extraction.diagnosesOrTerms : [];
@@ -429,7 +467,7 @@ function HealthProfileCard({ translate, locale, documents }: { translate: Transl
   </section>;
 }
 
-const localeTag: Record<Locale, string> = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN' };
+const localeTag: Record<Locale, string> = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN' };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -460,6 +498,9 @@ function getAnalysisErrorMessage(error: unknown, translate: Translate): string {
   if (payload?.error === 'AI document reading is not configured') {
     return translate('ai_reading_unavailable', 'AI reading is not set up yet. Your uploaded file is saved; please contact the administrator.');
   }
+  if (payload?.error === 'The uploaded file is not a supported medical document') {
+    return translate('unsupported_document', 'This file is not a valid PDF, JPG, PNG, or WebP document.');
+  }
   return translate('analyze_error', 'We could not read this file. Please try again later.');
 }
 
@@ -488,11 +529,13 @@ function ReviewPanel({ translate, doc, locale, summary, onSummary, extraction, o
   reviewed: boolean; onReviewed: (value: boolean) => void; onAnalyze: () => void; onConfirm: () => void;
   analyzing: boolean; confirming: boolean; onDelete: () => void; deleting: boolean;
 }) {
-  const needsReview = doc.status !== 'confirmed';
+  const needsReview = doc.status === 'review_required';
   const translatedSummary = doc.translatedSummary && doc.summaryLocale === locale ? doc.translatedSummary : doc.summary;
   return <div className="review-content">
     <div className="selected-file"><span className="selected-file-icon"><FileText size={16} /></span><span><b>{doc.fileName}</b><small>{doc.status === 'confirmed' ? translate('patient_confirmed_record', 'Patient-confirmed record') : translate('ai_draft', 'AI extraction is a draft')}</small></span><button aria-label={translate('remove_record', 'Remove this record')} onClick={onDelete} disabled={deleting} className="icon-button" data-testid={`button-delete-${doc.id}`}><Trash2 size={15} /></button></div>
     <div className="draft-alert"><AlertTriangle size={15} /><span><b>{translate('draft_disclaimer', 'Draft only — not a diagnosis or instruction.')}</b><small>{translate('prescription_review_disclaimer', 'Please compare every detail with your original record. Prescription names and doses are not definitive until verified by you and your clinician.')}</small></span></div>
+    {doc.status === 'failed' && <div className="inline-message message-error" role="alert"><p>{translate('document_read_failed', 'This document could not be read reliably. No verified information was saved.')}</p><button className="btn btn-quiet" onClick={onAnalyze} disabled={analyzing} data-testid="button-retry-analysis">{analyzing ? translate('preparing_draft', 'Retrying…') : translate('retry_analysis', 'Try reading it again')}</button></div>}
+    {doc.extractedText && <><label className="label review-label" htmlFor="extracted-source-text">{translate('extracted_text', 'Text read from document')}</label><textarea id="extracted-source-text" className="field extraction-editor" value={doc.extractedText} readOnly aria-label={translate('extracted_text', 'Text read from document')} data-testid="textarea-extracted-source-text" /></>}
     {doc.extraction || doc.summary || doc.translatedSummary ? <>
       {needsReview && doc.summary && doc.summaryLocale !== locale && <div className="language-draft-note"><Languages size={14} /><span>This summary is in a different language.</span><button onClick={onAnalyze} disabled={analyzing} data-testid="button-translate-summary">{analyzing ? 'Preparing…' : `Prepare in ${languages[locale]}`}</button></div>}
       <label className="label review-label" htmlFor="summary-draft">{translate('summary_draft', locale === 'en' ? 'Summary draft' : `${languages[locale]} summary draft`)}</label>
@@ -501,7 +544,8 @@ function ReviewPanel({ translate, doc, locale, summary, onSummary, extraction, o
       <textarea id="extraction-draft" className="field extraction-editor" value={extraction} onChange={(e) => onExtraction(e.target.value)} readOnly={!needsReview} spellCheck={false} data-testid="textarea-extraction-draft" />
       {needsReview && <label className="patient-check"><input type="checkbox" checked={reviewed} onChange={(e) => onReviewed(e.target.checked)} data-testid="checkbox-patient-reviewed" /><span><b>{translate('reviewed_original', 'I have reviewed this draft against my original document.')}</b><small>{translate('ai_may_mistake', 'I understand AI can make mistakes, especially with medicine names and doses.')}</small></span></label>}
       {needsReview && <button className="btn btn-primary confirm-button" onClick={onConfirm} disabled={!reviewed || confirming} data-testid="button-confirm-draft">{confirming ? <span className="tiny-loader" /> : <CheckCircle2 size={17} />}{confirming ? translate('saving_review', 'Saving your review…') : translate('confirm_draft', 'Confirm my reviewed draft')}</button>}
-      {!needsReview && <div className="confirmed-note"><BadgeCheck size={16} /> {translate('record_confirmed', 'This record was reviewed and confirmed by you.')}</div>}
+      {doc.status === 'confirmed' && <div className="confirmed-note"><BadgeCheck size={16} /> {translate('record_confirmed', 'This record was reviewed and confirmed by you.')}</div>}
+      {needsReview && <p className="review-verification-note">{translate('verify_uncertain_details', 'Check every uncertain or unclear value against the original document before confirming.')}</p>}
     </> : <div className="not-analyzed"><span className="summary-preview-icon"><Sparkles size={17} /></span><p>{translate('no_summary', labels.noSummary)}</p><button className="btn btn-quiet" onClick={onAnalyze} disabled={analyzing} data-testid="button-analyze-record">{analyzing ? <span className="tiny-loader" /> : <Sparkles size={16} />}{analyzing ? translate('preparing_draft', 'Preparing a draft…') : translate('prepare_summary', 'Prepare draft summary')}</button></div>}
     {doc.confidence !== null && doc.confidence !== undefined && <div className="confidence-note">{translate('extraction_confidence', 'Extraction confidence')}: {Math.round(doc.confidence * 100)}% <span>{translate('confidence_disclaimer', 'Confidence is not verification.')}</span></div>}
   </div>;
@@ -522,55 +566,67 @@ function FeedbackCard({ translate, open, setOpen, items, loading, failed, messag
 function AdminPage() {
   const queryClient = useQueryClient();
   const { data: profile, isLoading: profileLoading, isError, refetch } = useGetProfile();
-  const [view, setView] = useState<'overview' | 'patients' | 'documents' | 'feedback'>('overview');
   const admin = profile?.role === 'admin';
   const overview = useGetAdminOverview({ query: { queryKey: getGetAdminOverviewQueryKey(), enabled: !!admin } });
-  const patients = useListAdminPatients({ query: { queryKey: getListAdminPatientsQueryKey(), enabled: !!admin } });
-  const documents = useListAdminDocuments({ query: { queryKey: getListAdminDocumentsQueryKey(), enabled: !!admin } });
-  const feedback = useListAdminFeedback({ query: { queryKey: getListAdminFeedbackQueryKey(), enabled: !!admin } });
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const userParams: ListAdminUsersParams = {
+    page,
+    pageSize: 10,
+    search: search.trim() || undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  };
+  const users = useListAdminUsers(userParams, { query: { queryKey: getListAdminUsersQueryKey(userParams), enabled: !!admin } });
   if (profileLoading) return <LoadingShell label="Verifying your access" />;
   if (isError || !profile) return <ErrorState retry={() => refetch()} message="We couldn’t verify your account. Please try again." />;
   if (!admin) return <AppShell profile={profile}><div className="access-denied soft-card"><span><LockKeyhole size={23} /></span><h1 className="display">This space is for Altrix staff.</h1><p>Your account doesn’t have access to this workspace. If you think this is a mistake, please contact your administrator.</p><Link href="/portal" className="btn btn-primary">Return to your records <ArrowRight size={16} /></Link></div></AppShell>;
-  const loading = overview.isLoading || patients.isLoading || documents.isLoading || feedback.isLoading;
-  const error = overview.isError || patients.isError || documents.isError || feedback.isError;
-  const retry = () => { queryClient.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }); queryClient.invalidateQueries({ queryKey: getListAdminPatientsQueryKey() }); queryClient.invalidateQueries({ queryKey: getListAdminDocumentsQueryKey() }); queryClient.invalidateQueries({ queryKey: getListAdminFeedbackQueryKey() }); };
-  const patientRows = (patients.data || []).filter((p) => `${p.name} ${p.email}`.toLowerCase().includes(search.toLowerCase()));
-  const documentRows = (documents.data || []).filter((d) => `${d.fileName} ${d.patientName} ${d.patientEmail}`.toLowerCase().includes(search.toLowerCase()));
-  const feedbackRows = (feedback.data || []).filter((f) => `${f.patientName} ${f.patientEmail} ${f.message}`.toLowerCase().includes(search.toLowerCase()));
-  const tabs = [{ key: 'overview', title: 'Overview', icon: <BarChart3 size={16} /> }, { key: 'patients', title: 'Patients', icon: <Users size={16} /> }, { key: 'documents', title: 'Documents', icon: <FileText size={16} /> }, { key: 'feedback', title: 'Feedback', icon: <MessageSquareText size={16} /> }] as const;
+  const retry = () => {
+    queryClient.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListAdminUsersQueryKey(userParams) });
+  };
   return <AppShell profile={profile} active="admin">
-    <div className="admin-head fade-up"><div><div className="eyebrow">ALTRIX LABS · OPERATIONS</div><h1 className="display">Care, at a glance.</h1><p>Service health and patient activity. Patient data is shown only to authorized staff.</p></div><span className="admin-badge"><ShieldCheck size={15} /> Admin workspace</span></div>
-    <div className="admin-tabs" role="tablist">{tabs.map((tab) => <button role="tab" aria-selected={view === tab.key} className={view === tab.key ? 'active' : ''} key={tab.key} onClick={() => { setView(tab.key); setSearch(''); }} data-testid={`tab-admin-${tab.key}`}>{tab.icon}{tab.title}</button>)}</div>
-    {error && <ErrorState retry={retry} message="Some admin data couldn’t be loaded. Check your access or try again." />}
-    {loading && <AdminSkeleton />}
-    {!loading && !error && view === 'overview' && overview.data && <AdminOverviewView data={overview.data} />}
-    {!loading && !error && view !== 'overview' && <div className="admin-table-card soft-card"><div className="admin-table-heading"><div><div className="eyebrow">ALTRIX OPERATIONS</div><h2 className="display">{view === 'patients' ? 'Patients' : view === 'documents' ? 'Documents' : 'Patient feedback'}</h2></div><input className="field admin-search" type="search" placeholder="Search this view" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search admin records" data-testid="input-admin-search" /></div>
-      {view === 'patients' && <div className="table-scroll"><table><thead><tr><th>Patient</th><th>Language</th><th>Joined</th><th>Records</th></tr></thead><tbody>{patientRows.map((p) => <tr key={p.id}><td><b>{p.name || 'Patient'}</b><small>{p.email}</small></td><td>{languages[p.locale as Locale] || p.locale}</td><td>{new Date(p.createdAt).toLocaleDateString()}</td><td><span className="table-count">{p.documentCount}</span></td></tr>)}</tbody></table>{!patientRows.length && <AdminEmpty />}</div>}
-      {view === 'documents' && <div className="table-scroll"><table><thead><tr><th>Document</th><th>Patient</th><th>Type</th><th>Status</th><th>Added</th></tr></thead><tbody>{documentRows.map((doc) => <tr key={doc.id}><td><b>{doc.fileName}</b><small>{doc.id}</small></td><td><b>{doc.patientName}</b><small>{doc.patientEmail}</small></td><td>{humanType(doc.documentType)}</td><td><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : ''}`}><i />{humanStatus(doc.status)}</span></td><td>{new Date(doc.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table>{!documentRows.length && <AdminEmpty />}</div>}
-      {view === 'feedback' && <div className="admin-feedback-list">{feedbackRows.map((item) => <article className="admin-feedback-row" key={item.id}><div className="admin-feedback-top"><span className="category-chip">{item.category}</span><span className="feedback-score">{item.rating ? `${item.rating} / 5` : 'No rating'}</span></div><p>{item.message}</p><div className="admin-feedback-person">{item.patientName} <i>·</i> {item.patientEmail}<time>{new Date(item.createdAt).toLocaleDateString()}</time></div></article>)}{!feedbackRows.length && <AdminEmpty />}</div>}
-    </div>}
-    <div className="admin-access-note"><LockKeyhole size={14} /> Access to this area is verified by the Altrix server. This interface does not grant privileges.</div>
+    <section id="user-analytics" className="admin-analytics-section" aria-labelledby="user-analytics-heading">
+      <h1 id="user-analytics-heading" className="display">User Analytics</h1>
+      {overview.isLoading && <AdminSkeleton />}
+      {overview.isError && <ErrorState retry={retry} message="User analytics couldn’t be loaded. Check your access or try again." />}
+      {overview.data && <AdminOverviewView data={overview.data} />}
+    </section>
+    <section id="user-records" className="user-records-card soft-card" aria-labelledby="user-records-heading">
+      <div className="user-records-heading"><div><h2 id="user-records-heading" className="display">User Records</h2></div>
+        {users.data && <span className="user-total">{users.data.total.toLocaleString()} total</span>}
+      </div>
+      <label className="user-search-label">Search users<input className="field" type="search" maxLength={200} placeholder="Name, email, or user ID" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} data-testid="input-admin-search" /></label>
+      {users.isLoading && <p role="status">Loading user records…</p>}
+      {users.isError && <ErrorState retry={retry} message="User records couldn’t be loaded. Check your access or try again." />}
+      {users.data && <>
+        <div className="table-scroll"><table className="user-records-table"><thead><tr><th>User ID</th><th>Name</th><th>Email address</th><th>Role</th><th>Registration date</th></tr></thead><tbody>
+          {users.data.users.map((user) => <tr key={user.id}><td className="user-id-cell">{user.id}</td><td><b>{user.name || '—'}</b></td><td>{user.email}</td><td><span className={`user-role-badge ${user.role === 'admin' ? 'admin' : ''}`}>{user.role === 'admin' ? 'Admin' : 'Patient'}</span></td><td>{new Date(user.createdAt).toLocaleDateString()}</td></tr>)}
+        </tbody></table>{users.data.users.length === 0 && <AdminEmpty />}</div>
+        <div className="user-pagination"><span>Showing {users.data.total ? (page - 1) * users.data.pageSize + 1 : 0}–{Math.min(page * users.data.pageSize, users.data.total)} of {users.data.total.toLocaleString()} users</span><div><button className="btn btn-outline" type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1} data-testid="button-admin-previous">Previous</button><span>Page {users.data.page} of {users.data.totalPages}</span><button className="btn btn-outline" type="button" onClick={() => setPage((current) => Math.min(users.data!.totalPages, current + 1))} disabled={page >= users.data.totalPages} data-testid="button-admin-next">Next</button></div></div>
+      </>}
+    </section>
   </AppShell>;
 }
 
-function AdminOverviewView({ data }: { data: { totalPatients: number; activeThisMonth: number; totalDocuments: number; pendingReviews: number; averageRating: number; feedbackCount: number; monthlyUsers: { month: string; count: number }[]; documentTypes: { type: string; count: number }[] } }) {
-  const max = Math.max(1, ...data.monthlyUsers.map((m) => m.count));
+function AdminOverviewView({ data }: { data: AdminOverview }) {
   return <div className="admin-overview">
-    <div className="admin-stats"><MetricCard label="Total patients" value={data.totalPatients} sub={`${data.activeThisMonth} active this month`} icon={<Users size={18} />} tone="mint" /><MetricCard label="Health records" value={data.totalDocuments} sub="Across all patient accounts" icon={<FileText size={18} />} tone="peach" /><MetricCard label="Review needed" value={data.pendingReviews} sub="Patient confirmation pending" icon={<Clock3 size={18} />} tone="gold" /><MetricCard label="Patient rating" value={data.averageRating ? data.averageRating.toFixed(1) : '—'} sub={`${data.feedbackCount} feedback notes`} icon={<HeartHandshake size={18} />} tone="sage" /></div>
-    <div className="admin-chart-grid"><section className="chart-panel soft-card"><div className="chart-heading"><div><div className="eyebrow">PATIENT ACTIVITY</div><h2 className="display">A growing circle.</h2></div><span className="chart-legend"><i /> New patients</span></div><div className="bar-chart">{data.monthlyUsers.length ? data.monthlyUsers.map((item) => <div className="bar-column" key={item.month}><div className="bar-value">{item.count || ''}</div><div className="bar-track"><span style={{ height: `${Math.max(5, item.count / max * 100)}%` }} /></div><small>{item.month}</small></div>) : <AdminEmpty />}</div></section>
-      <section className="chart-panel soft-card"><div className="eyebrow">RECORD MIX</div><h2 className="display">What patients bring.</h2><div className="type-breakdown">{data.documentTypes.length ? data.documentTypes.map((item, i) => <div className="type-row" key={item.type}><span className={`type-dot dot-${i % 4}`} /><span>{humanType(item.type)}</span><b>{item.count}</b></div>) : <AdminEmpty />}</div></section></div>
-    <section className="admin-insight"><span><Sparkles size={17} /></span><p><b>Patient-led by design.</b> Extraction and summary content remain drafts until a patient has reviewed and confirmed them.</p></section>
+    <div className="user-analytics-grid">
+      <MetricCard label="Registered users" value={data.totalUsers} sub="All account profiles" icon={<Users size={18} />} tone="mint" />
+      <MetricCard label="Registered patients" value={data.totalPatients} sub="Patient accounts" icon={<HeartHandshake size={18} />} tone="peach" />
+      <MetricCard label="Registered admins" value={data.totalAdmins} sub="Administrator accounts" icon={<ShieldCheck size={18} />} tone="gold" />
+      <MetricCard label="Registered today" value={data.registrationsToday} sub="UTC calendar day" icon={<Clock3 size={18} />} tone="sage" />
+      <MetricCard label="Registered this week" value={data.registrationsThisWeek} sub="Week starts Monday (UTC)" icon={<Activity size={18} />} tone="mint" />
+      <MetricCard label="Registered this month" value={data.registrationsThisMonth} sub="UTC calendar month" icon={<BarChart3 size={18} />} tone="peach" />
+    </div>
   </div>;
 }
 
 function MetricCard({ label, value, sub, icon, tone }: { label: string; value: number | string; sub: string; icon: ReactNode; tone: string }) {
   return <article className="metric-card soft-card"><span className={`metric-icon ${tone}`}>{icon}</span><span className="metric-label">{label}</span><b className="metric-value">{value}</b><small>{sub}</small></article>;
 }
-function AdminSkeleton() { return <div className="admin-stats">{[0, 1, 2, 3].map((n) => <div className="metric-card soft-card" key={n}><i className="muted-skeleton" /><i className="muted-skeleton" /><i className="muted-skeleton" /></div>)}</div>; }
-function AdminEmpty() { return <div className="admin-empty"><span><FileText size={19} /></span><b>No matching records</b><p>Try another search, or come back when there’s more to see.</p></div>; }
-function humanType(type: string) { return ({ prescription: 'Prescription', lab_report: 'Lab report', discharge_summary: 'Discharge summary', diagnostic_report: 'Diagnostic report', other: 'Other' } as Record<string, string>)[type] || type.replaceAll('_', ' '); }
-function humanStatus(status: string) { return ({ uploaded: 'Added', processing: 'Processing', review_required: 'Review required', confirmed: 'Confirmed by patient', failed: 'Failed' } as Record<string, string>)[status] || status; }
+function AdminSkeleton() { return <div className="user-analytics-grid">{Array.from({ length: 6 }, (_, n) => <div className="metric-card soft-card" key={n}><i className="muted-skeleton" /><i className="muted-skeleton" /><i className="muted-skeleton" /></div>)}</div>; }
+function AdminEmpty() { return <div className="admin-empty"><span><Users size={19} /></span><b>No matching users</b><p>Try changing your search or filters.</p></div>; }
 
 function RequirePatient() {
   const auth = useAuth();

@@ -14,4 +14,5 @@ export const ProfileUpdateLocale = {
   hi: 'hi',
   ta: 'ta',
   te: 'te',
+  kn: 'kn',
 } as const;

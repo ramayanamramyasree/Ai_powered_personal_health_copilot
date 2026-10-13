@@ -5,16 +5,20 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminOverviewDocumentTypesItem } from './adminOverviewDocumentTypesItem';
-import type { AdminOverviewMonthlyUsersItem } from './adminOverviewMonthlyUsersItem';
+import type { AdminOverviewDailyRegistrationsItem } from './adminOverviewDailyRegistrationsItem';
+import type { AdminOverviewMonthlyRegistrationsItem } from './adminOverviewMonthlyRegistrationsItem';
+import type { AdminOverviewWeeklyRegistrationsItem } from './adminOverviewWeeklyRegistrationsItem';
 
 export interface AdminOverview {
+  totalUsers: number;
   totalPatients: number;
-  activeThisMonth: number;
-  totalDocuments: number;
-  pendingReviews: number;
-  averageRating: number;
-  feedbackCount: number;
-  monthlyUsers: AdminOverviewMonthlyUsersItem[];
-  documentTypes: AdminOverviewDocumentTypesItem[];
+  totalAdmins: number;
+  registrationsToday: number;
+  registrationsThisWeek: number;
+  registrationsThisMonth: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  dailyRegistrations: AdminOverviewDailyRegistrationsItem[];
+  weeklyRegistrations: AdminOverviewWeeklyRegistrationsItem[];
+  monthlyRegistrations: AdminOverviewMonthlyRegistrationsItem[];
 }

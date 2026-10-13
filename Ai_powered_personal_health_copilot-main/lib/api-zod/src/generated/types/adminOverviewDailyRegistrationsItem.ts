@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AdminOverviewMonthlyUsersItem = {
-  month: string;
+export type AdminOverviewDailyRegistrationsItem = {
+  period: string;
   count: number;
 };

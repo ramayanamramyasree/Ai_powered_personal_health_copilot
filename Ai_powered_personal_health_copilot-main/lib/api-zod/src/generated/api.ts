@@ -24,7 +24,7 @@ export const GetProfileResponse = zod.object({
   "id": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "locale": zod.enum(['en', 'hi', 'ta', 'te']),
+  "locale": zod.enum(['en', 'hi', 'ta', 'te', 'kn']),
   "role": zod.enum(['patient', 'admin']),
   "createdAt": zod.coerce.date().optional()
 })
@@ -34,14 +34,14 @@ export const GetProfileResponse = zod.object({
  * @summary Update the current user's language preference
  */
 export const UpdateProfileBody = zod.object({
-  "locale": zod.enum(['en', 'hi', 'ta', 'te'])
+  "locale": zod.enum(['en', 'hi', 'ta', 'te', 'kn'])
 })
 
 export const UpdateProfileResponse = zod.object({
   "id": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "locale": zod.enum(['en', 'hi', 'ta', 'te']),
+  "locale": zod.enum(['en', 'hi', 'ta', 'te', 'kn']),
   "role": zod.enum(['patient', 'admin']),
   "createdAt": zod.coerce.date().optional()
 })
@@ -139,7 +139,7 @@ export const AnalyzeDocumentParams = zod.object({
 })
 
 export const AnalyzeDocumentBody = zod.object({
-  "locale": zod.enum(['en', 'hi', 'ta', 'te'])
+  "locale": zod.enum(['en', 'hi', 'ta', 'te', 'kn'])
 })
 
 export const AnalyzeDocumentResponse = zod.object({
@@ -172,7 +172,7 @@ export const confirmDocumentBodySummaryMax = 10000;
 export const ConfirmDocumentBody = zod.object({
   "extraction": zod.record(zod.string(), zod.unknown()),
   "summary": zod.string().min(1).max(confirmDocumentBodySummaryMax),
-  "summaryLocale": zod.enum(['en', 'hi', 'ta', 'te'])
+  "summaryLocale": zod.enum(['en', 'hi', 'ta', 'te', 'kn'])
 })
 
 export const ConfirmDocumentResponse = zod.object({
@@ -233,10 +233,23 @@ export const CreateFeedbackResponse = zod.object({
  * @summary Get database-backed translations for a supported locale
  */
 export const GetTranslationsParams = zod.object({
-  "locale": zod.enum(['en', 'hi', 'ta', 'te'])
+  "locale": zod.enum(['en', 'hi', 'ta', 'te', 'kn'])
 })
 
 export const GetTranslationsResponse = zod.record(zod.string(), zod.string())
+
+
+/**
+ * @summary List enabled application languages
+ */
+export const ListLanguagesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "code": zod.enum(['en', 'hi', 'ta', 'te', 'kn']),
+  "nativeName": zod.string(),
+  "enabled": zod.boolean()
+})
+export const ListLanguagesResponse = zod.array(ListLanguagesResponseItem)
 
 
 /**
@@ -272,77 +285,69 @@ export const RequestUploadUrlResponse = zod.object({
 
 
 /**
- * @summary Get aggregate patient, document, and feedback analytics
+ * @summary Get database-derived user registration analytics
  */
 export const GetAdminOverviewResponse = zod.object({
+  "totalUsers": zod.number().int(),
   "totalPatients": zod.number().int(),
-  "activeThisMonth": zod.number().int(),
-  "totalDocuments": zod.number().int(),
-  "pendingReviews": zod.number().int(),
-  "averageRating": zod.number(),
-  "feedbackCount": zod.number().int(),
-  "monthlyUsers": zod.array(zod.object({
-  "month": zod.string(),
+  "totalAdmins": zod.number().int(),
+  "registrationsToday": zod.number().int(),
+  "registrationsThisWeek": zod.number().int(),
+  "registrationsThisMonth": zod.number().int(),
+  "activeUsers": zod.number().int(),
+  "inactiveUsers": zod.number().int(),
+  "dailyRegistrations": zod.array(zod.object({
+  "period": zod.string(),
   "count": zod.number().int()
 })),
-  "documentTypes": zod.array(zod.object({
-  "type": zod.string(),
+  "weeklyRegistrations": zod.array(zod.object({
+  "period": zod.string(),
+  "count": zod.number().int()
+})),
+  "monthlyRegistrations": zod.array(zod.object({
+  "period": zod.string(),
   "count": zod.number().int()
 }))
 })
 
 
 /**
- * @summary List patient profiles and record counts for the authorized admin
+ * @summary List user registration records for the authorized admin
  */
-export const ListAdminPatientsResponseItem = zod.object({
+export const listAdminUsersQueryPageDefault = 1;
+
+export const listAdminUsersQueryPageSizeDefault = 10;
+export const listAdminUsersQueryPageSizeMax = 100;
+
+export const listAdminUsersQuerySearchMax = 200;
+
+export const listAdminUsersQuerySortByDefault = `createdAt`;
+export const listAdminUsersQuerySortOrderDefault = `desc`;
+
+export const ListAdminUsersQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listAdminUsersQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listAdminUsersQueryPageSizeMax).default(listAdminUsersQueryPageSizeDefault),
+  "search": zod.coerce.string().max(listAdminUsersQuerySearchMax).optional(),
+  "role": zod.enum(['patient', 'admin']).optional(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "sortBy": zod.enum(['id', 'name', 'email', 'role', 'createdAt', 'lastSeenAt']).default(listAdminUsersQuerySortByDefault),
+  "sortOrder": zod.enum(['asc', 'desc']).default(listAdminUsersQuerySortOrderDefault)
+})
+
+export const ListAdminUsersResponse = zod.object({
+  "users": zod.array(zod.object({
   "id": zod.string(),
   "email": zod.string(),
   "name": zod.string(),
-  "locale": zod.string(),
+  "role": zod.enum(['patient', 'admin']),
   "createdAt": zod.coerce.date(),
-  "documentCount": zod.number().int()
+  "lastSeenAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'inactive'])
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "totalPages": zod.number().int()
 })
-export const ListAdminPatientsResponse = zod.array(ListAdminPatientsResponseItem)
-
-
-/**
- * @summary List patient medical documents for the authorized admin
- */
-export const ListAdminDocumentsResponseItem = zod.object({
-  "id": zod.string(),
-  "fileName": zod.string(),
-  "documentType": zod.enum(['prescription', 'lab_report', 'discharge_summary', 'diagnostic_report', 'other']),
-  "status": zod.enum(['uploaded', 'processing', 'review_required', 'confirmed', 'failed']),
-  "createdAt": zod.coerce.date(),
-  "extractedText": zod.string().nullish(),
-  "summary": zod.string().nullish(),
-  "translatedSummary": zod.string().nullish(),
-  "summaryLocale": zod.string().nullish(),
-  "extraction": zod.record(zod.string(), zod.unknown()).nullish(),
-  "confidence": zod.number().nullish(),
-  "requiresReview": zod.boolean().optional()
-}).and(zod.object({
-  "patientName": zod.string(),
-  "patientEmail": zod.string(),
-  "objectPath": zod.string().optional()
-}))
-export const ListAdminDocumentsResponse = zod.array(ListAdminDocumentsResponseItem)
-
-
-/**
- * @summary Review feedback submitted by patients
- */
-export const ListAdminFeedbackResponseItem = zod.object({
-  "id": zod.string(),
-  "category": zod.string(),
-  "rating": zod.number().int().nullish(),
-  "message": zod.string(),
-  "createdAt": zod.coerce.date()
-}).and(zod.object({
-  "patientName": zod.string(),
-  "patientEmail": zod.string()
-}))
-export const ListAdminFeedbackResponse = zod.array(ListAdminFeedbackResponseItem)
 
 

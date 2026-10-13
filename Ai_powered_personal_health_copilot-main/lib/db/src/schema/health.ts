@@ -13,6 +13,18 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 
+export const languagesTable = pgTable(
+  "altrix_languages",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    nativeName: text("native_name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+  },
+  (table) => [uniqueIndex("altrix_languages_code_idx").on(table.code)],
+);
+
 export const userProfilesTable = pgTable(
   "altrix_user_profiles",
   {
@@ -86,6 +98,7 @@ export const insertUserProfileSchema = createInsertSchema(userProfilesTable).omi
   createdAt: true,
   lastSeenAt: true,
 });
+export const insertLanguageSchema = createInsertSchema(languagesTable);
 export const insertMedicalDocumentSchema = createInsertSchema(medicalDocumentsTable).omit({
   createdAt: true,
   updatedAt: true,
@@ -98,10 +111,12 @@ export const insertTranslationSchema = createInsertSchema(translationsTable).omi
 });
 
 export type UserProfile = typeof userProfilesTable.$inferSelect;
+export type Language = typeof languagesTable.$inferSelect;
 export type MedicalDocument = typeof medicalDocumentsTable.$inferSelect;
 export type PatientFeedback = typeof patientFeedbackTable.$inferSelect;
 export type Translation = typeof translationsTable.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+export type InsertLanguage = z.infer<typeof insertLanguageSchema>;
 export type InsertMedicalDocument = z.infer<typeof insertMedicalDocumentSchema>;
 export type InsertPatientFeedback = z.infer<typeof insertPatientFeedbackSchema>;
 export type InsertTranslation = z.infer<typeof insertTranslationSchema>;

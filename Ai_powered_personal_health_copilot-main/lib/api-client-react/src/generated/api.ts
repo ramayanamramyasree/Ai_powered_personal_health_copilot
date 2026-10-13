@@ -20,14 +20,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  AdminDocument,
-  AdminFeedback,
   AdminOverview,
-  AdminPatient,
+  AdminUsersPage,
   DocumentAnalysisInput,
   DocumentConfirmation,
   FeedbackInput,
   HealthStatus,
+  Language,
+  ListAdminUsersParams,
   MedicalDocument,
   MedicalDocumentInput,
   PatientFeedback,
@@ -967,7 +967,7 @@ export const useCreateFeedback = <TError = ErrorType<unknown>,
       return useMutation(getCreateFeedbackMutationOptions(options));
     }
 
-export const getGetTranslationsUrl = (locale: 'en' | 'hi' | 'ta' | 'te',) => {
+export const getGetTranslationsUrl = (locale: 'en' | 'hi' | 'ta' | 'te' | 'kn',) => {
 
 
 
@@ -978,7 +978,7 @@ export const getGetTranslationsUrl = (locale: 'en' | 'hi' | 'ta' | 'te',) => {
 /**
  * @summary Get database-backed translations for a supported locale
  */
-export const getTranslations = async (locale: 'en' | 'hi' | 'ta' | 'te', options?: Parameters<typeof customFetch>[1]): Promise<TranslationDictionary> => {
+export const getTranslations = async (locale: 'en' | 'hi' | 'ta' | 'te' | 'kn', options?: Parameters<typeof customFetch>[1]): Promise<TranslationDictionary> => {
 
   return customFetch<TranslationDictionary>(getGetTranslationsUrl(locale),
   {
@@ -993,14 +993,14 @@ export const getTranslations = async (locale: 'en' | 'hi' | 'ta' | 'te', options
 
 
 
-export const getGetTranslationsQueryKey = (locale: 'en' | 'hi' | 'ta' | 'te',) => {
+export const getGetTranslationsQueryKey = (locale: 'en' | 'hi' | 'ta' | 'te' | 'kn',) => {
     return [
     `/api/translations/${locale}`
     ] as const;
     }
 
 
-export const getGetTranslationsQueryOptions = <TData = Awaited<ReturnType<typeof getTranslations>>, TError = ErrorType<unknown>>(locale: 'en' | 'hi' | 'ta' | 'te', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTranslations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetTranslationsQueryOptions = <TData = Awaited<ReturnType<typeof getTranslations>>, TError = ErrorType<unknown>>(locale: 'en' | 'hi' | 'ta' | 'te' | 'kn', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTranslations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1027,11 +1027,88 @@ export type GetTranslationsQueryError = ErrorType<unknown>
  */
 
 export function useGetTranslations<TData = Awaited<ReturnType<typeof getTranslations>>, TError = ErrorType<unknown>>(
- locale: 'en' | 'hi' | 'ta' | 'te', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTranslations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ locale: 'en' | 'hi' | 'ta' | 'te' | 'kn', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTranslations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTranslationsQueryOptions(locale,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListLanguagesUrl = () => {
+
+
+
+
+  return `/api/languages`
+}
+
+/**
+ * @summary List enabled application languages
+ */
+export const listLanguages = async ( options?: Parameters<typeof customFetch>[1]): Promise<Language[]> => {
+
+  return customFetch<Language[]>(getListLanguagesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLanguagesQueryKey = () => {
+    return [
+    `/api/languages`
+    ] as const;
+    }
+
+
+export const getListLanguagesQueryOptions = <TData = Awaited<ReturnType<typeof listLanguages>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLanguagesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLanguages>>> = ({ signal }) => listLanguages({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLanguages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLanguagesQueryResult = NonNullable<Awaited<ReturnType<typeof listLanguages>>>
+export type ListLanguagesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List enabled application languages
+ */
+
+export function useListLanguages<TData = Awaited<ReturnType<typeof listLanguages>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLanguagesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1141,7 +1218,7 @@ export const getGetAdminOverviewUrl = () => {
 }
 
 /**
- * @summary Get aggregate patient, document, and feedback analytics
+ * @summary Get database-derived user registration analytics
  */
 export const getAdminOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminOverview> => {
 
@@ -1188,7 +1265,7 @@ export type GetAdminOverviewQueryError = ErrorType<void>
 
 
 /**
- * @summary Get aggregate patient, document, and feedback analytics
+ * @summary Get database-derived user registration analytics
  */
 
 export function useGetAdminOverview<TData = Awaited<ReturnType<typeof getAdminOverview>>, TError = ErrorType<void>>(
@@ -1209,20 +1286,27 @@ export function useGetAdminOverview<TData = Awaited<ReturnType<typeof getAdminOv
 
 
 
-export const getListAdminPatientsUrl = () => {
+export const getListAdminUsersUrl = (params?: ListAdminUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/patients`
+  return stringifiedParams.length > 0 ? `/api/admin/users?${stringifiedParams}` : `/api/admin/users`
 }
 
 /**
- * @summary List patient profiles and record counts for the authorized admin
+ * @summary List user registration records for the authorized admin
  */
-export const listAdminPatients = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminPatient[]> => {
+export const listAdminUsers = async (params?: ListAdminUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminUsersPage> => {
 
-  return customFetch<AdminPatient[]>(getListAdminPatientsUrl(),
+  return customFetch<AdminUsersPage>(getListAdminUsersUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1235,199 +1319,45 @@ export const listAdminPatients = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getListAdminPatientsQueryKey = () => {
+export const getListAdminUsersQueryKey = (params?: ListAdminUsersParams,) => {
     return [
-    `/api/admin/patients`
+    `/api/admin/users`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminPatientsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminPatients>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminPatients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListAdminUsersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminUsers>>, TError = ErrorType<void>>(params?: ListAdminUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAdminPatientsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListAdminUsersQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminPatients>>> = ({ signal }) => listAdminPatients({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminUsers>>> = ({ signal }) => listAdminUsers(params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminPatients>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminUsers>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListAdminPatientsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminPatients>>>
-export type ListAdminPatientsQueryError = ErrorType<void>
+export type ListAdminUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminUsers>>>
+export type ListAdminUsersQueryError = ErrorType<void>
 
 
 /**
- * @summary List patient profiles and record counts for the authorized admin
+ * @summary List user registration records for the authorized admin
  */
 
-export function useListAdminPatients<TData = Awaited<ReturnType<typeof listAdminPatients>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminPatients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListAdminUsers<TData = Awaited<ReturnType<typeof listAdminUsers>>, TError = ErrorType<void>>(
+ params?: ListAdminUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAdminPatientsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getListAdminDocumentsUrl = () => {
-
-
-
-
-  return `/api/admin/documents`
-}
-
-/**
- * @summary List patient medical documents for the authorized admin
- */
-export const listAdminDocuments = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminDocument[]> => {
-
-  return customFetch<AdminDocument[]>(getListAdminDocumentsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListAdminDocumentsQueryKey = () => {
-    return [
-    `/api/admin/documents`
-    ] as const;
-    }
-
-
-export const getListAdminDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminDocuments>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAdminDocumentsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminDocuments>>> = ({ signal }) => listAdminDocuments({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminDocuments>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListAdminDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminDocuments>>>
-export type ListAdminDocumentsQueryError = ErrorType<void>
-
-
-/**
- * @summary List patient medical documents for the authorized admin
- */
-
-export function useListAdminDocuments<TData = Awaited<ReturnType<typeof listAdminDocuments>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListAdminDocumentsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getListAdminFeedbackUrl = () => {
-
-
-
-
-  return `/api/admin/feedback`
-}
-
-/**
- * @summary Review feedback submitted by patients
- */
-export const listAdminFeedback = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminFeedback[]> => {
-
-  return customFetch<AdminFeedback[]>(getListAdminFeedbackUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListAdminFeedbackQueryKey = () => {
-    return [
-    `/api/admin/feedback`
-    ] as const;
-    }
-
-
-export const getListAdminFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof listAdminFeedback>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAdminFeedbackQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminFeedback>>> = ({ signal }) => listAdminFeedback({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListAdminFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminFeedback>>>
-export type ListAdminFeedbackQueryError = ErrorType<void>
-
-
-/**
- * @summary Review feedback submitted by patients
- */
-
-export function useListAdminFeedback<TData = Awaited<ReturnType<typeof listAdminFeedback>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListAdminFeedbackQueryOptions(options)
+  const queryOptions = getListAdminUsersQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

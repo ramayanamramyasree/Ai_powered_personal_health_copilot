@@ -5,12 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { LanguageCode } from './languageCode';
 
-export interface AdminPatient {
+export interface Language {
   id: string;
-  email: string;
   name: string;
-  locale: string;
-  createdAt: Date;
-  documentCount: number;
+  code: LanguageCode;
+  nativeName: string;
+  enabled: boolean;
 }

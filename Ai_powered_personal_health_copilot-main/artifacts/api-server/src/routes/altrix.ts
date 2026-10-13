@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
 import { Router, type IRouter } from "express";
-import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
   AnalyzeDocumentBody,
   AnalyzeDocumentParams,
@@ -17,16 +17,17 @@ import {
   GetProfileResponse,
   GetTranslationsParams,
   GetTranslationsResponse,
-  ListAdminDocumentsResponse,
-  ListAdminFeedbackResponse,
-  ListAdminPatientsResponse,
+  ListAdminUsersQueryParams,
+  ListAdminUsersResponse,
   ListDocumentsResponse,
   ListMyFeedbackResponse,
+  ListLanguagesResponse,
   UpdateProfileBody,
   UpdateProfileResponse,
 } from "@workspace/api-zod";
 import {
   db,
+  languagesTable,
   medicalDocumentsTable,
   patientFeedbackTable,
   translationsTable,
@@ -44,7 +45,14 @@ const medicalDocumentTypes = [
   "diagnostic_report",
   "other",
 ] as const;
-const locales = ["en", "hi", "ta", "te"] as const;
+const locales = ["en", "hi", "ta", "te", "kn"] as const;
+const languageSeed = [
+  { id: "en", code: "en", name: "English", nativeName: "English", enabled: true },
+  { id: "hi", code: "hi", name: "Hindi", nativeName: "हिन्दी", enabled: true },
+  { id: "ta", code: "ta", name: "Tamil", nativeName: "தமிழ்", enabled: true },
+  { id: "te", code: "te", name: "Telugu", nativeName: "తెలుగు", enabled: true },
+  { id: "kn", code: "kn", name: "Kannada", nativeName: "ಕನ್ನಡ", enabled: true },
+];
 
 const translationSeed: Record<(typeof locales)[number], Record<string, string>> = {
   en: {
@@ -55,7 +63,7 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     get_started: "Get started", learn_more: "Explore how it works", trust_title: "Built around your health and privacy",
     feature_records: "One clear health timeline", feature_records_copy: "Keep reports and prescriptions organized in one place.",
     feature_summary: "Understand each report", feature_summary_copy: "Read a plain-language explanation alongside the original document.",
-    feature_language: "Your language, your choice", feature_language_copy: "Switch the interface and summaries between English, Hindi, Tamil, and Telugu.",
+    feature_language: "Your language, your choice", feature_language_copy: "Switch the interface and summaries between English, Hindi, Tamil, Telugu, and Kannada.",
     safety_note: "AI readings can be wrong, especially with handwriting. Review every extracted detail and confirm it with a healthcare professional.",
     portal_title: "Your health space", welcome: "Welcome back", upload: "Add a medical document",
     upload_hint: "Upload a clear photo or PDF of a medical report or prescription. Handwritten notes are supported as a reviewable draft.",
@@ -227,7 +235,64 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     view_original: "అసలు పత్రాన్ని చూడండి", readable: "చదవగలిగేలా ఉంది", unclear: "స్పష్టంగా లేదు — తనిఖీ చేయండి",
     feedback_category: "అభిప్రాయం అంశం",
   },
+  kn: {
+    brand: "Altrix Labs", product: "ಆರೋಗ್ಯ ಸಹಾಯಕ", nav_home: "ಮುಖಪುಟ", nav_how: "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+    nav_safety: "ನಿಮ್ಮ ಗೌಪ್ಯತೆ", sign_in: "ಸೈನ್ ಇನ್", create_account: "ಖಾತೆ ರಚಿಸಿ",
+    hero_eyebrow: "ನಿಮ್ಮ ಆರೋಗ್ಯ, ಇನ್ನಷ್ಟು ಸ್ಪಷ್ಟವಾಗಿ", hero_title: "ನಿಮ್ಮ ಆರೋಗ್ಯದ ಕಥೆಯನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ.",
+    get_started: "ಪ್ರಾರಂಭಿಸಿ", learn_more: "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ", trust_title: "ನಿಮ್ಮ ಆರೋಗ್ಯ ಮತ್ತು ಗೌಪ್ಯತೆಯನ್ನು ಗಮನದಲ್ಲಿಟ್ಟುಕೊಂಡು",
+    feature_records: "ಆರೋಗ್ಯದ ಸ್ಪಷ್ಟ ಕಾಲರೇಖೆ", feature_summary: "ಪ್ರತಿ ವರದಿಯನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ",
+    safety_note: "ಕೈಬರಹ ಸೇರಿದಂತೆ AI ಓದು ತಪ್ಪಾಗಿರಬಹುದು. ಪ್ರತಿಯೊಂದು ವಿವರವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಆರೋಗ್ಯ ವೃತ್ತಿಪರರಿಂದ ದೃಢೀಕರಿಸಿ.",
+    portal_title: "ನಿಮ್ಮ ಆರೋಗ್ಯ ಸ್ಥಳ", welcome: "ಮತ್ತೆ ಸ್ವಾಗತ", upload: "ವೈದ್ಯಕೀಯ ದಾಖಲೆಯನ್ನು ಸೇರಿಸಿ",
+    choose_file: "ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ", document_type: "ದಾಖಲೆಯ ಪ್ರಕಾರ", prescription: "ಔಷಧಿ ಚೀಟಿ",
+    lab_report: "ಪ್ರಯೋಗಾಲಯ ವರದಿ", discharge_summary: "ಡಿಸ್ಚಾರ್ಜ್ ಸಾರಾಂಶ", diagnostic_report: "ರೋಗನಿರ್ಣಯ ವರದಿ",
+    records: "ನಿಮ್ಮ ದಾಖಲೆಗಳು", timeline: "ಆರೋಗ್ಯ ಕಾಲರೇಖೆ", health_profile: "ನಿಮ್ಮ ಆರೋಗ್ಯ ಪ್ರೊಫೈಲ್",
+    language: "ಭಾಷೆ", settings: "ಆದ್ಯತೆಗಳು", feedback: "ಪ್ರತಿಕ್ರಿಯೆ ಹಂಚಿಕೊಳ್ಳಿ", feedback_message: "ನಿಮ್ಮ ಸಂದೇಶ",
+    submit_feedback: "ಪ್ರತಿಕ್ರಿಯೆ ಕಳುಹಿಸಿ", loading: "ಲೋಡ್ ಆಗುತ್ತಿದೆ…", save: "ಉಳಿಸಿ", cancel: "ರದ್ದುಮಾಡಿ",
+    sign_out: "ಸೈನ್ ಔಟ್", search: "ಹುಡುಕಿ", uploaded: "ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ", confirmed: "ನೀವು ದೃಢೀಕರಿಸಿದ್ದೀರಿ",
+    review_required: "ದಯವಿಟ್ಟು ಈ ಕರಡನ್ನು ಪರಿಶೀಲಿಸಿ", analyze: "ದಾಖಲೆಯನ್ನು ಓದಿ", analyzing: "ದಾಖಲೆಯನ್ನು ಓದುತ್ತಿದೆ…",
+    extracted_text: "ದಾಖಲೆಯಿಂದ ಓದಿದ ಪಠ್ಯ", medications: "ಔಷಧಿಗಳು", lab_values: "ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶಗಳು",
+    diagnoses: "ಉಲ್ಲೇಖಿಸಿದ ಪದಗಳು", document_date: "ದಾಖಲೆಯ ದಿನಾಂಕ", confidence: "ಓದುವ ವಿಶ್ವಾಸಾರ್ಹತೆ",
+    ai_reading_unavailable: "AI ಓದುವಿಕೆ ಇನ್ನೂ ಹೊಂದಿಸಲಾಗಿಲ್ಲ. ಅಪ್‌ಲೋಡ್ ಮಾಡಿದ ಫೈಲ್ ಉಳಿಸಲಾಗಿದೆ; ನಿರ್ವಾಹಕರನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+    upload_error: "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.", account_error: "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    emergency: "ತುರ್ತು ಲಕ್ಷಣಗಳಿದ್ದರೆ ಸ್ಥಳೀಯ ತುರ್ತು ಸೇವೆಗೆ ಕರೆಮಾಡಿ. Altrix ತುರ್ತು ಸೇವೆಯಲ್ಲ.",
+    privacy: "ನಿಮ್ಮ ಖಾಸಗಿ ದಾಖಲೆಗಳನ್ನು ನೀವು ಮತ್ತು ಅಧಿಕೃತ ನಿರ್ವಾಹಕರು ಮಾತ್ರ ನೋಡಬಹುದು.",
+    verify_against_source: "ದಯವಿಟ್ಟು ಮೂಲ ದಾಖಲೆಯೊಂದಿಗೆ ಪರಿಶೀಲಿಸಿ.",
+  },
 };
+
+let languageSeedPromise: Promise<void> | null = null;
+
+function seedLanguageData(): Promise<void> {
+  if (languageSeedPromise) return languageSeedPromise;
+  languageSeedPromise = writeLanguageSeedData().catch((error: unknown) => {
+    languageSeedPromise = null;
+    throw error;
+  });
+  return languageSeedPromise;
+}
+
+async function writeLanguageSeedData(): Promise<void> {
+  await db.insert(languagesTable).values(languageSeed).onConflictDoUpdate({
+    target: languagesTable.code,
+    set: {
+      name: sql`excluded.name`,
+      nativeName: sql`excluded.native_name`,
+      enabled: sql`excluded.enabled`,
+    },
+  });
+  const seedRows = locales.flatMap((locale) =>
+    Object.entries(translationSeed[locale]).map(([translationKey, value]) => ({
+      id: `${locale}:${translationKey}`,
+      locale,
+      translationKey,
+      value,
+    })),
+  );
+  await db.insert(translationsTable).values(seedRows).onConflictDoUpdate({
+    target: [translationsTable.locale, translationsTable.translationKey],
+    set: { value: sql`excluded.value`, updatedAt: new Date() },
+  });
+}
 
 function asRequest(req: Parameters<typeof requirePatient>[0]) {
   return req as AltrixRequest;
@@ -297,8 +362,31 @@ function isLabValueExtractionList(value: unknown): value is Array<Record<string,
     isOptionalString(item.unit) &&
     isOptionalString(item.referenceRange) &&
     isOptionalString(item.flag) &&
-    isConfidence(item.confidence)
+    isConfidence(item.confidence) &&
+    typeof item.uncertain === "boolean"
   );
+}
+
+function detectMedicalMimeType(
+  bytes: Buffer,
+): "application/pdf" | "image/jpeg" | "image/png" | "image/webp" | null {
+  if (bytes.subarray(0, 5).toString("ascii") === "%PDF-") return "application/pdf";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes.subarray(1, 4).toString("ascii") === "PNG" &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) return "image/png";
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  ) return "image/webp";
+  return null;
 }
 
 function normalizeDocumentDate(value: unknown): string | null {
@@ -306,6 +394,22 @@ function normalizeDocumentDate(value: unknown): string | null {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value ? null : value;
 }
+
+router.get("/languages", async (_req, res): Promise<void> => {
+  await seedLanguageData();
+  const languages = await db
+    .select({
+      id: languagesTable.id,
+      name: languagesTable.name,
+      code: languagesTable.code,
+      nativeName: languagesTable.nativeName,
+      enabled: languagesTable.enabled,
+    })
+    .from(languagesTable)
+    .where(eq(languagesTable.enabled, true))
+    .orderBy(asc(languagesTable.id));
+  res.json(ListLanguagesResponse.parse(languages));
+});
 
 router.get("/profile", requireSignedIn, async (req, res): Promise<void> => {
   const profile = asRequest(req).altrixProfile!;
@@ -321,13 +425,23 @@ router.get("/profile", requireSignedIn, async (req, res): Promise<void> => {
   );
 });
 
-router.put("/profile", requirePatient, async (req, res): Promise<void> => {
+router.put("/profile", requireSignedIn, async (req, res): Promise<void> => {
   const parsed = UpdateProfileBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid language preference" });
     return;
   }
   const userId = asRequest(req).altrixUserId!;
+  await seedLanguageData();
+  const [enabledLanguage] = await db
+    .select({ code: languagesTable.code })
+    .from(languagesTable)
+    .where(and(eq(languagesTable.code, parsed.data.locale), eq(languagesTable.enabled, true)))
+    .limit(1);
+  if (!enabledLanguage) {
+    res.status(400).json({ error: "Unsupported language" });
+    return;
+  }
   const [profile] = await db
     .update(userProfilesTable)
     .set({ locale: parsed.data.locale })
@@ -342,23 +456,32 @@ router.get("/translations/:locale", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Unsupported language" });
     return;
   }
-  const seedRows = locales.flatMap((locale) =>
-    Object.entries(translationSeed[locale]).map(([translationKey, value]) => ({
-      id: `${locale}:${translationKey}`,
-      locale,
-      translationKey,
-      value,
-    })),
-  );
-  await db.insert(translationsTable).values(seedRows).onConflictDoNothing();
+  await seedLanguageData();
+  const [language] = await db
+    .select({ code: languagesTable.code })
+    .from(languagesTable)
+    .where(and(eq(languagesTable.code, params.data.locale), eq(languagesTable.enabled, true)))
+    .limit(1);
+  if (!language) {
+    res.status(400).json({ error: "Unsupported language" });
+    return;
+  }
   const rows = await db
     .select({
+      locale: translationsTable.locale,
       key: translationsTable.translationKey,
       value: translationsTable.value,
     })
     .from(translationsTable)
-    .where(eq(translationsTable.locale, params.data.locale));
-  res.json(GetTranslationsResponse.parse(Object.fromEntries(rows.map((row) => [row.key, row.value]))));
+    .where(inArray(translationsTable.locale, params.data.locale === "en" ? ["en"] : ["en", params.data.locale]));
+  const translations: Record<string, string> = { ...translationSeed.en };
+  for (const row of rows) {
+    if (row.key && row.value && row.locale === "en") translations[row.key] = row.value;
+  }
+  for (const row of rows) {
+    if (row.key && row.value && row.locale === params.data.locale) translations[row.key] = row.value;
+  }
+  res.json(GetTranslationsResponse.parse(translations));
 });
 
 router.get("/documents", requirePatient, async (req, res): Promise<void> => {
@@ -455,27 +578,38 @@ router.post("/documents/:id/analyze", requirePatient, async (req, res): Promise<
   await db
     .update(medicalDocumentsTable)
     .set({ status: "processing" })
-    .where(eq(medicalDocumentsTable.id, document.id));
+    .where(
+      and(
+        eq(medicalDocumentsTable.id, document.id),
+        eq(medicalDocumentsTable.ownerId, userId),
+      ),
+    );
   try {
     const file = await storage.getObjectEntityFile(document.objectPath);
     const [bytes] = await file.download();
+    const mimeType = detectMedicalMimeType(bytes);
+    if (!mimeType) {
+      await db
+        .update(medicalDocumentsTable)
+        .set({ status: "failed" })
+        .where(
+          and(
+            eq(medicalDocumentsTable.id, document.id),
+            eq(medicalDocumentsTable.ownerId, userId),
+          ),
+        );
+      res.status(415).json({ error: "The uploaded file is not a supported medical document" });
+      return;
+    }
     const base64 = bytes.toString("base64");
-    const suffix = document.fileName.toLowerCase().split(".").pop();
-    const mimeType =
-      suffix === "pdf"
-        ? "application/pdf"
-        : suffix === "png"
-          ? "image/png"
-          : suffix === "webp"
-            ? "image/webp"
-            : "image/jpeg";
     const targetLanguage = {
       en: "English",
       hi: "Hindi",
       ta: "Tamil",
       te: "Telugu",
+      kn: "Kannada",
     }[body.data.locale];
-    const instructions = `You are a careful medical-document reader. Read only the supplied medical report or prescription; do not infer missing facts, diagnose the patient, recommend treatment, or change medication instructions. Never guess a medicine name, dose, date, lab value, unit, or reference range. Use null when a field is not stated or not legible. For handwriting, mark the affected medicine as uncertain=true, lower its confidence, and plainly say when text is unclear. Return one JSON object with exactly these keys: extractedText (string), documentType, documentDate (ISO date YYYY-MM-DD or null), medicines (array of objects with name, dose, frequency, duration, confidence from 0 to 1, uncertain boolean), labValues (array of objects with name, value, unit, referenceRange, flag, confidence from 0 to 1), diagnosesOrTerms (array of terms copied from the source, not inferred diagnoses), overallConfidence (0 to 1), and summary. Write a short, simple-language summary in ${targetLanguage}. For a result explicitly flagged by the document or clearly outside a printed reference range, explain only that it is above or below the range shown, repeat the source value, unit, and range accurately, and say that a result alone is not a diagnosis and should be interpreted by a clinician. Do not guess why a value is outside range or label it abnormal without source support. If a range or flag is unclear, say it needs review.`;
+    const instructions = `You are a careful medical-document reader. Read every page of the supplied medical report or prescription; do not infer missing facts, diagnose the patient, recommend treatment, or change medication instructions. Never guess a medicine name, dose, date, lab value, unit, or reference range. Use null when a field is not stated or not legible. For handwriting and every unclear or low-confidence medical detail, mark uncertain=true, lower its confidence, and plainly say what needs verification. Return one JSON object with exactly these keys: extractedText (string), documentType, documentDate (ISO date YYYY-MM-DD or null), medicines (array of objects with name, dose, frequency, duration, confidence from 0 to 1, uncertain boolean), labValues (array of objects with name, value, unit, referenceRange, flag, confidence from 0 to 1, uncertain boolean), diagnosesOrTerms (array of terms copied from the source, not inferred diagnoses), overallConfidence (0 to 1), and summary. Write a short, simple-language summary in ${targetLanguage}. For a result explicitly flagged by the document or clearly outside a printed reference range, explain only that it is above or below the range shown, repeat the source value, unit, and range accurately, and say that a result alone is not a diagnosis and should be interpreted by a clinician. Do not guess why a value is outside range or label it abnormal without source support. If a range or flag is unclear, say it needs review. If no text can be read, return extractedText as an empty string, empty detail arrays, overallConfidence 0, and explain that the document could not be read reliably in summary.`;
     const prompt = `Read this ${document.documentType.replaceAll("_", " ")}. Extract only legible information, preserve the source wording and values, and use null for missing or unreadable details. If this is not a medical report or prescription, return JSON with extractedText set to an empty string, empty medicines/labValues/diagnosesOrTerms arrays, overallConfidence 0, documentDate null, and summary exactly "This file does not appear to be a medical report or prescription."`;
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const content =
@@ -483,7 +617,7 @@ router.post("/documents/:id/analyze", requirePatient, async (req, res): Promise<
         ? [
             {
               type: "input_file" as const,
-              filename: document.fileName,
+              filename: `${document.id}.${mimeType === "application/pdf" ? "pdf" : mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg"}`,
               file_data: `data:${mimeType};base64,${base64}`,
             },
             { type: "input_text" as const, text: prompt },
@@ -570,10 +704,16 @@ router.patch("/documents/:id/confirm", requirePatient, async (req, res): Promise
       requiresReview: false,
       status: "confirmed",
     })
-    .where(and(eq(medicalDocumentsTable.id, params.data.id), eq(medicalDocumentsTable.ownerId, userId)))
+    .where(
+      and(
+        eq(medicalDocumentsTable.id, params.data.id),
+        eq(medicalDocumentsTable.ownerId, userId),
+        eq(medicalDocumentsTable.status, "review_required"),
+      ),
+    )
     .returning();
   if (!document) {
-    res.status(404).json({ error: "Document not found" });
+    res.status(409).json({ error: "Only successfully analyzed documents can be confirmed" });
     return;
   }
   res.json(GetDocumentResponse.parse(documentDto(document)));
@@ -636,111 +776,139 @@ router.post("/feedback", requirePatient, async (req, res): Promise<void> => {
   res.status(201).json(CreateFeedbackResponse.parse(feedbackDto(feedback)));
 });
 
-router.get("/admin/overview", requireAdmin, async (req, res): Promise<void> => {
-  const [patients] = await db.select({ value: count() }).from(userProfilesTable).where(eq(userProfilesTable.role, "patient"));
-  const [documents] = await db.select({ value: count() }).from(medicalDocumentsTable);
-  const [reviews] = await db.select({ value: count() }).from(medicalDocumentsTable).where(eq(medicalDocumentsTable.status, "review_required"));
-  const [feedbackCount] = await db.select({ value: count() }).from(patientFeedbackTable);
-  const [active] = await db
-    .select({ value: count() })
+function formatRegistrationPeriod(date: Date, unit: "day" | "week" | "month"): string {
+  return unit === "month" ? date.toISOString().slice(0, 7) : date.toISOString().slice(0, 10);
+}
+
+async function getRegistrationTrend(unit: "day" | "week" | "month", start: Date, size: number) {
+  const bucket = sql<Date>`date_trunc(${unit}, ${userProfilesTable.createdAt} AT TIME ZONE 'UTC')`;
+  const rows = await db
+    .select({ period: bucket, value: count() })
     .from(userProfilesTable)
-    .where(gte(userProfilesTable.lastSeenAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
-  const [rating] = await db
-    .select({ value: sql<number>`coalesce(avg(${patientFeedbackTable.rating}), 0)` })
-    .from(patientFeedbackTable)
-    .where(isNotNull(patientFeedbackTable.rating));
-  const allProfiles = await db
-    .select({ createdAt: userProfilesTable.createdAt })
-    .from(userProfilesTable)
-    .where(eq(userProfilesTable.role, "patient"));
-  const monthlyUsers: Array<{ month: string; count: number }> = [];
-  for (let offset = 5; offset >= 0; offset -= 1) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - offset, 1);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    monthlyUsers.push({
-      month: key,
-      count: allProfiles.filter((profile) => {
-        const created = profile.createdAt;
-        return `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, "0")}` === key;
-      }).length,
-    });
-  }
-  const grouped = await db
-    .select({ type: medicalDocumentsTable.documentType, value: count() })
-    .from(medicalDocumentsTable)
-    .groupBy(medicalDocumentsTable.documentType);
+    .where(gte(userProfilesTable.createdAt, start))
+    .groupBy(bucket)
+    .orderBy(bucket);
+  const values = new Map(rows.map((row) => [formatRegistrationPeriod(row.period, unit), row.value]));
+
+  return Array.from({ length: size }, (_, index) => {
+    const date = new Date(start);
+    if (unit === "day") date.setUTCDate(date.getUTCDate() + index);
+    else if (unit === "week") date.setUTCDate(date.getUTCDate() + index * 7);
+    else date.setUTCMonth(date.getUTCMonth() + index);
+    const period = formatRegistrationPeriod(date, unit);
+    return { period, count: values.get(period) ?? 0 };
+  });
+}
+
+router.get("/admin/overview", requireAdmin, async (_req, res): Promise<void> => {
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const weekStart = new Date(todayStart);
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const dailyStart = new Date(todayStart);
+  dailyStart.setUTCDate(dailyStart.getUTCDate() - 29);
+  const weeklyStart = new Date(weekStart);
+  weeklyStart.setUTCDate(weeklyStart.getUTCDate() - 77);
+  const monthlyStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  const activeSince = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [counts, dailyRegistrations, weeklyRegistrations, monthlyRegistrations] = await Promise.all([
+    db
+      .select({
+        totalUsers: count(),
+        totalPatients: sql<number>`count(*) filter (where ${userProfilesTable.role} = 'patient')::int`,
+        totalAdmins: sql<number>`count(*) filter (where ${userProfilesTable.role} = 'admin')::int`,
+        registrationsToday: sql<number>`count(*) filter (where ${userProfilesTable.createdAt} >= ${todayStart})::int`,
+        registrationsThisWeek: sql<number>`count(*) filter (where ${userProfilesTable.createdAt} >= ${weekStart})::int`,
+        registrationsThisMonth: sql<number>`count(*) filter (where ${userProfilesTable.createdAt} >= ${monthStart})::int`,
+        activeUsers: sql<number>`count(*) filter (where ${userProfilesTable.lastSeenAt} >= ${activeSince})::int`,
+        inactiveUsers: sql<number>`count(*) filter (where ${userProfilesTable.lastSeenAt} < ${activeSince})::int`,
+      })
+      .from(userProfilesTable),
+    getRegistrationTrend("day", dailyStart, 30),
+    getRegistrationTrend("week", weeklyStart, 12),
+    getRegistrationTrend("month", monthlyStart, 12),
+  ]);
+
+  const [summary] = counts;
   res.json(
     GetAdminOverviewResponse.parse({
-      totalPatients: patients.value,
-      activeThisMonth: active.value,
-      totalDocuments: documents.value,
-      pendingReviews: reviews.value,
-      averageRating: Number(rating.value ?? 0),
-      feedbackCount: feedbackCount.value,
-      monthlyUsers,
-      documentTypes: grouped.map((row) => ({ type: row.type, count: row.value })),
+      totalUsers: summary.totalUsers,
+      totalPatients: summary.totalPatients,
+      totalAdmins: summary.totalAdmins,
+      registrationsToday: summary.registrationsToday,
+      registrationsThisWeek: summary.registrationsThisWeek,
+      registrationsThisMonth: summary.registrationsThisMonth,
+      activeUsers: summary.activeUsers,
+      inactiveUsers: summary.inactiveUsers,
+      dailyRegistrations,
+      weeklyRegistrations,
+      monthlyRegistrations,
     }),
   );
 });
 
-router.get("/admin/patients", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
+  const query = ListAdminUsersQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: "Invalid user list filters" });
+    return;
+  }
+  const { page, pageSize, search: rawSearch, role, status, sortBy, sortOrder } = query.data;
+  const search = rawSearch?.trim() ?? "";
+
+  const activeSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const filters: SQL[] = [];
+  if (role === "patient" || role === "admin") filters.push(eq(userProfilesTable.role, role));
+  if (status === "active") filters.push(gte(userProfilesTable.lastSeenAt, activeSince));
+  if (status === "inactive") filters.push(sql`${userProfilesTable.lastSeenAt} < ${activeSince}`);
+  if (search) {
+    const term = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+    filters.push(or(
+      ilike(userProfilesTable.id, term),
+      ilike(userProfilesTable.name, term),
+      ilike(userProfilesTable.email, term),
+    )!);
+  }
+  const where = filters.length ? and(...filters) : undefined;
+  const [total] = await db.select({ value: count() }).from(userProfilesTable).where(where);
+  const sortColumns = {
+    id: userProfilesTable.id,
+    name: userProfilesTable.name,
+    email: userProfilesTable.email,
+    role: userProfilesTable.role,
+    createdAt: userProfilesTable.createdAt,
+    lastSeenAt: userProfilesTable.lastSeenAt,
+  } as const;
+  const sortColumn = sortColumns[sortBy];
+  const order = sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn);
   const profiles = await db
-    .select()
+    .select({
+      id: userProfilesTable.id,
+      name: userProfilesTable.name,
+      email: userProfilesTable.email,
+      role: userProfilesTable.role,
+      createdAt: userProfilesTable.createdAt,
+      lastSeenAt: userProfilesTable.lastSeenAt,
+    })
     .from(userProfilesTable)
-    .where(eq(userProfilesTable.role, "patient"))
-    .orderBy(desc(userProfilesTable.createdAt));
-  const counts = await db
-    .select({ ownerId: medicalDocumentsTable.ownerId, value: count() })
-    .from(medicalDocumentsTable)
-    .groupBy(medicalDocumentsTable.ownerId);
-  const countMap = new Map(counts.map((item) => [item.ownerId, item.value]));
-  res.json(
-    ListAdminPatientsResponse.parse(
-      profiles.map((profile) => ({
-        id: profile.id,
-        email: profile.email,
-        name: profile.name,
-        locale: profile.locale,
-        createdAt: profile.createdAt,
-        documentCount: countMap.get(profile.id) ?? 0,
-      })),
-    ),
-  );
-});
+    .where(where)
+    .orderBy(order, asc(userProfilesTable.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
-router.get("/admin/documents", requireAdmin, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({ document: medicalDocumentsTable, patientName: userProfilesTable.name, patientEmail: userProfilesTable.email })
-    .from(medicalDocumentsTable)
-    .innerJoin(userProfilesTable, eq(medicalDocumentsTable.ownerId, userProfilesTable.id))
-    .orderBy(desc(medicalDocumentsTable.createdAt));
   res.json(
-    ListAdminDocumentsResponse.parse(
-      rows.map(({ document, patientName, patientEmail }) => ({
-        ...documentDto(document),
-        patientName,
-        patientEmail,
-        objectPath: document.objectPath,
+    ListAdminUsersResponse.parse({
+      users: profiles.map((profile) => ({
+        ...profile,
+        status: profile.lastSeenAt >= activeSince ? "active" : "inactive",
       })),
-    ),
-  );
-});
-
-router.get("/admin/feedback", requireAdmin, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({ feedback: patientFeedbackTable, patientName: userProfilesTable.name, patientEmail: userProfilesTable.email })
-    .from(patientFeedbackTable)
-    .innerJoin(userProfilesTable, eq(patientFeedbackTable.ownerId, userProfilesTable.id))
-    .orderBy(desc(patientFeedbackTable.createdAt));
-  res.json(
-    ListAdminFeedbackResponse.parse(
-      rows.map(({ feedback, patientName, patientEmail }) => ({
-        ...feedbackDto(feedback),
-        patientName,
-        patientEmail,
-      })),
-    ),
+      total: total.value,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total.value / pageSize)),
+    }),
   );
 });
 
