@@ -1,0 +1,1 @@
+- [AI provider choice](ai-provider-choice.md) — use the user's OpenAI key; do not retry the declined Replit AI billing option.
