@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -47,5 +47,12 @@ app.use(
 );
 
 app.use("/api", router);
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "API route not found" });
+});
+app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+  req.log.error({ err: error }, "Unhandled API error");
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;
