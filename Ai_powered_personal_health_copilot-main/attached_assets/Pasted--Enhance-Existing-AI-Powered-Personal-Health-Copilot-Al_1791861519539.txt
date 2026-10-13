@@ -1,0 +1,152 @@
+# Enhance Existing AI-Powered Personal Health Copilot – Altrix Health Copilot
+
+Continue developing my existing **AI-Powered Personal Health Copilot** project. First inspect the current codebase, database, frontend, backend, authentication, and API integrations. Do not rebuild the project from scratch or remove existing working features. Implement the following requirements by modifying only the necessary files.
+
+## 1. Authentication and Password Recovery
+
+- Implement secure registration, login, logout, and session management.
+- Add a Forgot Password page.
+- Allow users to recover their accounts using a one-time recovery code sent to their verified email address.
+- Include a secure recovery-code verification page and a reset-password page.
+- Recovery codes must be random, expire after a short period, be single-use, and be stored securely.
+- Add resend-code functionality with rate limits and clear error messages.
+- Never reveal whether an email address is registered.
+- Do not display recovery codes or passwords in application logs or admin dashboards.
+- Add password validation, secure password hashing, and protection against brute-force attempts.
+- Show clear success and failure messages throughout the process.
+
+Use a configured email service through environment variables or Replit Secrets. If email delivery is not configured, clearly indicate that configuration is required. Do not pretend that a recovery email was sent when it was not.
+
+## 2. Patient Dashboard – Add More Useful Pages
+
+Create a modern, responsive patient dashboard with sidebar navigation and the following pages:
+
+1. **Overview:** Welcome section, recent activity, health statistics, and shortcuts.
+2. **Medical Records:** Upload, view, search, filter, and organize medical documents.
+3. **AI Report Analysis:** Extract text from uploaded medical images and PDFs and explain the results.
+4. **Prescriptions:** Extract medicine names, dosages, instructions, prescribing dates, and prescriber details when readable.
+5. **Lab Reports:** Display test names, values, units, reference ranges, and abnormal-value indicators when supported by the report.
+6. **Health Timeline:** Show medical records, prescriptions, reports, and diagnoses chronologically.
+7. **Health Profile:** Allow patients to manage their personal information, allergies, existing conditions, and emergency contact details.
+8. **ABHA/ABDM:** Provide a dedicated page for ABHA ID information and consent-based health-record linking or import.
+9. **Reports and Summaries:** Allow patients to view and download summaries of their uploaded records.
+10. **Feedback and Support:** Submit feedback, report problems, and view submission status.
+11. **Notifications:** Show upload results, processing status, account notifications, and relevant reminders.
+12. **Settings:** Manage language preferences, account security, password changes, and privacy settings.
+
+Make all pages accessible through working navigation. Maintain a consistent design and ensure the layout works on desktop and mobile devices.
+
+## 3. Medical Image and PDF OCR
+
+When a patient uploads an image, scanned document, handwritten prescription, or PDF, the application must:
+
+- Accept JPG, JPEG, PNG, and PDF files.
+- Extract and display the actual text present in the uploaded document.
+- Display the extracted text separately from the AI-generated explanation.
+- Use OCR suitable for printed and handwritten medical documents where possible.
+- Correctly handle image rotation, low resolution, contrast, and preprocessing where necessary.
+- Support multiple pages in PDFs and scanned documents.
+- Show upload progress, processing status, extraction confidence when available, and understandable error messages.
+- Allow users to review and correct extracted text before saving it.
+- Extract structured fields such as patient name, report date, diagnosis, medicine names, dosages, laboratory test values, and reference ranges when present.
+- Clearly mark unreadable or uncertain text instead of inventing missing information.
+- Preserve the original uploaded file and associate it with the authenticated patient's account.
+- Save extracted text, structured results, and summaries in the database so that they remain available in Medical Records and the Health Timeline.
+
+Use the existing OCR or AI integrations where possible. If they are incomplete, integrate an appropriate OCR solution. Do not rely on fake sample responses in the real upload flow.
+
+## 4. AI Health Summaries
+
+- Convert extracted medical information into simple, understandable language.
+- Explain what reported laboratory values and abnormal indicators may mean, using the report's reference ranges where available.
+- Separate text extracted from the source document from AI-generated interpretation.
+- Clearly identify missing information and uncertain extraction.
+- Never invent diagnoses, medicines, dosages, test values, or clinical recommendations.
+- Include a disclaimer that the application provides informational support and does not replace a qualified healthcare professional.
+- Do not recommend changing or stopping prescribed medicines without consulting a clinician.
+
+## 5. Admin Dashboard – User Analytics Only
+
+Create a separate administrator dashboard accessible only to authorized administrators.
+
+The primary purpose of this dashboard is to monitor registered users and platform usage. Include:
+
+- Total registered users.
+- New registrations over time, with daily, weekly, and monthly filters.
+- Active users and recent login activity, using clearly defined metrics.
+- User growth charts and registration trends.
+- A searchable, filterable, paginated user table.
+- User registration date, account status, and last login where available.
+- Number of medical records uploaded by each user.
+- Total medical records and document-processing activity across the platform.
+- Upload success and failure rates.
+- Document types, such as prescriptions, lab reports, and discharge summaries.
+- OCR processing statistics and processing failures.
+- AI-analysis usage statistics and errors.
+- Feedback volume and unresolved feedback counts.
+- Date-range filters and export of permitted aggregate analytics.
+
+Show actual values calculated from the database, not hardcoded numbers or sample charts.
+
+### Privacy and permissions
+
+- Administrators must not be able to access patients' medical documents, extracted medical text, diagnoses, prescriptions, or private health summaries through the analytics dashboard.
+- Display record counts and operational statistics only.
+- Do not expose passwords, recovery codes, API keys, or sensitive authentication tokens.
+- Enforce administrator authorization in the backend, not just by hiding frontend pages.
+- Patients must only be able to access their own records.
+- Restrict exports to authorized, necessary account and aggregate analytics data.
+
+## 6. ABHA ID and ABDM Readiness
+
+Add a dedicated ABHA/ABDM module.
+
+- Allow a patient to enter and manage their ABHA ID where appropriate.
+- Validate the input format without claiming that the identity has been officially verified.
+- Provide a mock ABHA linking flow clearly labelled as a demonstration if official integration credentials are unavailable.
+- Prepare the data model for FHIR-aligned health records, including appropriate Patient, DocumentReference, Observation, Condition, MedicationRequest, and Encounter resources where relevant.
+- Keep patient identity, medical documents, extracted clinical information, and document metadata linked consistently.
+- Provide consent-aware workflows for health-record access and import.
+- Use official ABDM APIs and authorized integration processes when credentials and access are available.
+- Never simulate a successful official ABHA verification or ABDM record import in production.
+- Do not collect ABHA authentication secrets or OTPs unless required by an approved, official integration flow.
+
+## 7. Database and Backend
+
+Inspect and reuse the existing database and backend architecture.
+
+- Create or update the required database models and migrations.
+- Link all records to the correct authenticated patient.
+- Store file metadata, upload timestamps, extraction results, processing status, and summaries.
+- Use secure file storage and validate uploaded file types and sizes.
+- Handle database errors, missing configuration, and failed external API calls gracefully.
+- Keep API keys in Replit Secrets or environment variables.
+- Avoid duplicate records and duplicate processing where possible.
+
+## 8. UI and User Experience
+
+- Use a professional healthcare dashboard design with a consistent color palette, readable typography, and accessible controls.
+- Provide clear navigation, search, filters, loading indicators, empty states, and error messages.
+- Add confirmation dialogs for sensitive account actions.
+- Make every button and form functional.
+- Support English and retain any existing regional-language support.
+- Do not remove existing working pages or integrations.
+
+## 9. Testing and Completion
+
+Before making large changes, inspect the existing project and identify completed and incomplete features.
+
+After implementation:
+
+1. Start the application and fix actual runtime errors.
+2. Test registration, login, logout, and the password recovery flow.
+3. Test image and PDF upload and verify that extracted text is displayed.
+4. Test saving, retrieving, and displaying medical records in the patient's timeline.
+5. Verify that one patient cannot access another patient's records.
+6. Verify that non-admin users cannot access admin analytics.
+7. Confirm that admin analytics are calculated from real database records.
+8. Verify the ABHA demonstration flow and clearly identify any missing official integration.
+9. Test the dashboard navigation, feedback form, and responsive layout.
+10. Report which features are fully working, which require external API keys or credentials, and which remain incomplete.
+
+Work incrementally, preserve existing working functionality, and prioritize authentication, real OCR extraction, patient record persistence, and the admin user-analytics dashboard first. Do not claim a feature is complete unless it has been implemented and tested.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Altrix Health Copilot"
+description = "Altrix Labs personal health copilot for patients to securely organize medical reports and prescriptions, review careful AI-assisted summaries, and share verified records and feedback with a single authorized administrator. Includes multilingual interface, secure patient accounts, handwritten-document review, and admin analytics."
+version = "1.0.0"
+id = "artifacts/altrix-health"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21361
+
+[services.development]
+run = "pnpm --filter @workspace/altrix-health run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/altrix-health", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/altrix-health/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21361"
+BASE_PATH = "/"

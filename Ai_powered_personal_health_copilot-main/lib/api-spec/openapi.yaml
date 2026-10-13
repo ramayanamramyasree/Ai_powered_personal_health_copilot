@@ -1,0 +1,459 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: profile
+    description: Authenticated patient profile
+  - name: documents
+    description: Private medical document records and AI extraction
+  - name: feedback
+    description: Patient feedback
+  - name: admin
+    description: Single-authorized-admin patient and product analytics
+  - name: translations
+    description: Database-backed interface translations
+  - name: storage
+    description: Private medical document upload
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get the authenticated user's profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Authentication required
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update the current user's language preference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List the current user's medical documents
+      responses:
+        "200":
+          description: Medical documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedicalDocument"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Add a private medical document after upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicalDocumentInput"
+      responses:
+        "201":
+          description: Document created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalDocument"
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      summary: Get a document owned by the current user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Medical document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalDocument"
+        "404":
+          description: Document not found
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document owned by the current user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+  /documents/{id}/analyze:
+    post:
+      operationId: analyzeDocument
+      tags: [documents]
+      summary: Extract and explain medical information from a document
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentAnalysisInput"
+      responses:
+        "200":
+          description: AI-assisted extraction draft for patient review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalDocument"
+  /documents/{id}/confirm:
+    patch:
+      operationId: confirmDocument
+      tags: [documents]
+      summary: Save patient-verified extracted information
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentConfirmation"
+      responses:
+        "200":
+          description: Confirmed medical document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalDocument"
+  /feedback:
+    get:
+      operationId: listMyFeedback
+      tags: [feedback]
+      summary: List feedback from the current patient
+      responses:
+        "200":
+          description: Patient feedback
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientFeedback"
+    post:
+      operationId: createFeedback
+      tags: [feedback]
+      summary: Submit patient feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackInput"
+      responses:
+        "201":
+          description: Feedback saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientFeedback"
+  /translations/{locale}:
+    get:
+      operationId: getTranslations
+      tags: [translations]
+      summary: Get database-backed translations for a supported locale
+      parameters:
+        - in: path
+          name: locale
+          required: true
+          schema:
+            type: string
+            enum: [en, hi, ta, te]
+      responses:
+        "200":
+          description: Translation dictionary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslationDictionary"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a private presigned URL for uploading a medical document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [admin]
+      summary: Get aggregate patient, document, and feedback analytics
+      responses:
+        "200":
+          description: Admin analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+        "403":
+          description: Admin access required
+  /admin/patients:
+    get:
+      operationId: listAdminPatients
+      tags: [admin]
+      summary: List patient profiles and record counts for the authorized admin
+      responses:
+        "200":
+          description: Patient list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminPatient"
+        "403":
+          description: Admin access required
+  /admin/documents:
+    get:
+      operationId: listAdminDocuments
+      tags: [admin]
+      summary: List patient medical documents for the authorized admin
+      responses:
+        "200":
+          description: Patient document list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminDocument"
+        "403":
+          description: Admin access required
+  /admin/feedback:
+    get:
+      operationId: listAdminFeedback
+      tags: [admin]
+      summary: Review feedback submitted by patients
+      responses:
+        "200":
+          description: Patient feedback
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminFeedback"
+        "403":
+          description: Admin access required
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Profile:
+      type: object
+      required: [id, email, name, locale, role]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        locale: { type: string, enum: [en, hi, ta, te] }
+        role: { type: string, enum: [patient, admin] }
+        createdAt: { type: string, format: date-time }
+    ProfileUpdate:
+      type: object
+      required: [locale]
+      properties:
+        locale: { type: string, enum: [en, hi, ta, te] }
+    MedicalDocument:
+      type: object
+      required: [id, fileName, documentType, status, createdAt]
+      properties:
+        id: { type: string }
+        fileName: { type: string }
+        documentType: { type: string, enum: [prescription, lab_report, discharge_summary, diagnostic_report, other] }
+        status: { type: string, enum: [uploaded, processing, review_required, confirmed, failed] }
+        createdAt: { type: string, format: date-time }
+        extractedText: { type: [string, "null"] }
+        summary: { type: [string, "null"] }
+        translatedSummary: { type: [string, "null"] }
+        summaryLocale: { type: [string, "null"] }
+        extraction: { type: [object, "null"], additionalProperties: true }
+        confidence: { type: [number, "null"] }
+        requiresReview: { type: boolean }
+    MedicalDocumentInput:
+      type: object
+      required: [fileName, objectPath, documentType]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        objectPath: { type: string, minLength: 1, maxLength: 2048 }
+        documentType: { type: string, enum: [prescription, lab_report, discharge_summary, diagnostic_report, other] }
+    DocumentAnalysisInput:
+      type: object
+      required: [locale]
+      properties:
+        locale: { type: string, enum: [en, hi, ta, te] }
+    DocumentConfirmation:
+      type: object
+      required: [extraction, summary, summaryLocale]
+      properties:
+        extraction: { type: object, additionalProperties: true }
+        summary: { type: string, minLength: 1, maxLength: 10000 }
+        summaryLocale: { type: string, enum: [en, hi, ta, te] }
+    FeedbackInput:
+      type: object
+      required: [message]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        category: { type: string, enum: [experience, accuracy, accessibility, other] }
+        message: { type: string, minLength: 2, maxLength: 4000 }
+    PatientFeedback:
+      type: object
+      required: [id, category, message, createdAt]
+      properties:
+        id: { type: string }
+        category: { type: string }
+        rating: { type: [integer, "null"] }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+    TranslationDictionary:
+      type: object
+      additionalProperties:
+        type: string
+    AdminOverview:
+      type: object
+      required: [totalPatients, activeThisMonth, totalDocuments, pendingReviews, averageRating, feedbackCount, monthlyUsers, documentTypes]
+      properties:
+        totalPatients: { type: integer }
+        activeThisMonth: { type: integer }
+        totalDocuments: { type: integer }
+        pendingReviews: { type: integer }
+        averageRating: { type: number }
+        feedbackCount: { type: integer }
+        monthlyUsers:
+          type: array
+          items:
+            type: object
+            required: [month, count]
+            properties:
+              month: { type: string }
+              count: { type: integer }
+        documentTypes:
+          type: array
+          items:
+            type: object
+            required: [type, count]
+            properties:
+              type: { type: string }
+              count: { type: integer }
+    AdminPatient:
+      type: object
+      required: [id, email, name, locale, createdAt, documentCount]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        locale: { type: string }
+        createdAt: { type: string, format: date-time }
+        documentCount: { type: integer }
+    AdminDocument:
+      allOf:
+        - $ref: "#/components/schemas/MedicalDocument"
+        - type: object
+          required: [patientName, patientEmail]
+          properties:
+            patientName: { type: string }
+            patientEmail: { type: string }
+            objectPath: { type: string }
+    AdminFeedback:
+      allOf:
+        - $ref: "#/components/schemas/PatientFeedback"
+        - type: object
+          required: [patientName, patientEmail]
+          properties:
+            patientName: { type: string }
+            patientEmail: { type: string }
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: integer, minimum: 1, maximum: 15000000 }
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf] }
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
