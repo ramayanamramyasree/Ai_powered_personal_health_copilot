@@ -63,6 +63,11 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     document_type: "Document type", prescription: "Prescription", lab_report: "Lab report",
     discharge_summary: "Discharge summary", diagnostic_report: "Diagnostic report", other: "Other medical document",
     records: "Your records", timeline: "Health timeline", no_records: "Your timeline is ready for your first document.",
+    health_profile: "Your health profile", reviewed_health_facts: "FROM RECORDS YOU CONFIRMED",
+    health_profile_safety: "Only details from records you confirmed appear here. Lab flags are copied from the report; they are not diagnoses.",
+    health_profile_empty: "Reviewed medicines, test values, and terms will appear here after you confirm an extracted record.",
+    reference_range: "Reference range", source_flag: "Report flag", verify_against_source: "Please verify against the original record.",
+    ai_reading_unavailable: "AI reading is not set up yet. Your uploaded file is saved; please contact the administrator.",
     analyze: "Read document", analyzing: "Reading document…", review_required: "Please review this draft",
     confirm_extraction: "Confirm details", edit_details: "Edit details", extracted_text: "Text read from document",
     plain_summary: "In simple language", medications: "Medicines", lab_values: "Test results",
@@ -103,6 +108,11 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     document_type: "दस्तावेज़ का प्रकार", prescription: "दवा का पर्चा", lab_report: "लैब रिपोर्ट",
     discharge_summary: "डिस्चार्ज सारांश", diagnostic_report: "जाँच रिपोर्ट", other: "अन्य मेडिकल दस्तावेज़",
     records: "आपके रिकॉर्ड", timeline: "स्वास्थ्य समयरेखा", no_records: "पहला दस्तावेज़ जोड़ने के लिए आपकी समयरेखा तैयार है।",
+    health_profile: "आपकी स्वास्थ्य प्रोफ़ाइल", reviewed_health_facts: "आपके द्वारा जाँचे गए रिकॉर्ड",
+    health_profile_safety: "यहाँ केवल आपके द्वारा जाँचे गए रिकॉर्ड की जानकारी है। जाँच के संकेत रिपोर्ट से लिए गए हैं; वे निदान नहीं हैं।",
+    health_profile_empty: "किसी रिकॉर्ड से निकाली गई जानकारी की पुष्टि करने के बाद दवाएँ, जाँच के नतीजे और उल्लेखित शब्द यहाँ दिखेंगे।",
+    reference_range: "संदर्भ सीमा", source_flag: "रिपोर्ट का संकेत", verify_against_source: "मूल रिकॉर्ड से फिर जाँचें।",
+    ai_reading_unavailable: "AI से पढ़ना अभी सेट अप नहीं है। आपकी अपलोड की गई फ़ाइल सुरक्षित है; कृपया एडमिन से संपर्क करें।",
     analyze: "दस्तावेज़ पढ़ें", analyzing: "दस्तावेज़ पढ़ा जा रहा है…", review_required: "कृपया इस ड्राफ्ट की जाँच करें",
     confirm_extraction: "जानकारी की पुष्टि करें", edit_details: "जानकारी बदलें", extracted_text: "दस्तावेज़ से पढ़ा गया पाठ",
     plain_summary: "सरल भाषा में", medications: "दवाएँ", lab_values: "जाँच के नतीजे",
@@ -143,6 +153,11 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     document_type: "ஆவண வகை", prescription: "மருந்துச் சீட்டு", lab_report: "ஆய்வக அறிக்கை",
     discharge_summary: "வெளியேற்றச் சுருக்கம்", diagnostic_report: "பரிசோதனை அறிக்கை", other: "மற்ற மருத்துவ ஆவணம்",
     records: "உங்கள் பதிவுகள்", timeline: "ஆரோக்கிய காலவரிசை", no_records: "முதல் ஆவணத்திற்காக உங்கள் காலவரிசை தயாராக உள்ளது.",
+    health_profile: "உங்கள் ஆரோக்கிய விவரங்கள்", reviewed_health_facts: "நீங்கள் உறுதிப்படுத்திய பதிவுகள்",
+    health_profile_safety: "நீங்கள் சரிபார்த்து உறுதிப்படுத்திய பதிவுகளின் விவரங்கள் மட்டுமே இங்கே இருக்கும். ஆய்வகக் குறிகள் அறிக்கையிலிருந்து எடுக்கப்பட்டவை; அவை நோயறிதல் அல்ல.",
+    health_profile_empty: "பிரித்தெடுக்கப்பட்ட விவரங்களை நீங்கள் உறுதிப்படுத்திய பிறகு மருந்துகள், பரிசோதனை மதிப்புகள் மற்றும் குறிப்பிடப்பட்ட சொற்கள் இங்கே தோன்றும்.",
+    reference_range: "குறிப்பு வரம்பு", source_flag: "அறிக்கை குறி", verify_against_source: "அசல் பதிவுடன் மீண்டும் சரிபார்க்கவும்.",
+    ai_reading_unavailable: "AI வாசிப்பு இன்னும் அமைக்கப்படவில்லை. நீங்கள் பதிவேற்றிய கோப்பு சேமிக்கப்பட்டுள்ளது; நிர்வாகியைத் தொடர்புகொள்ளவும்.",
     analyze: "ஆவணத்தைப் படிக்கவும்", analyzing: "ஆவணம் படிக்கப்படுகிறது…", review_required: "இந்த வரைவைக் சரிபார்க்கவும்",
     confirm_extraction: "விவரங்களை உறுதிப்படுத்தவும்", edit_details: "விவரங்களைத் திருத்தவும்", extracted_text: "ஆவணத்திலிருந்து வாசித்த உரை",
     plain_summary: "எளிய மொழியில்", medications: "மருந்துகள்", lab_values: "பரிசோதனை முடிவுகள்",
@@ -183,6 +198,11 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
     document_type: "పత్రం రకం", prescription: "ప్రిస్క్రిప్షన్", lab_report: "ల్యాబ్ నివేదిక",
     discharge_summary: "డిశ్చార్జ్ సారాంశం", diagnostic_report: "పరీక్ష నివేదిక", other: "ఇతర వైద్య పత్రం",
     records: "మీ రికార్డులు", timeline: "ఆరోగ్య కాలక్రమం", no_records: "మీ మొదటి పత్రం కోసం కాలక్రమం సిద్ధంగా ఉంది.",
+    health_profile: "మీ ఆరోగ్య ప్రొఫైల్", reviewed_health_facts: "మీరు నిర్ధారించిన రికార్డుల నుంచి",
+    health_profile_safety: "మీరు తనిఖీ చేసి నిర్ధారించిన రికార్డుల వివరాలే ఇక్కడ కనిపిస్తాయి. ల్యాబ్ సూచనలు అసలు నివేదికలో ఉన్నవే; అవి నిర్ధారణలు కావు.",
+    health_profile_empty: "సేకరించిన వివరాలను మీరు నిర్ధారించిన తర్వాత మందులు, పరీక్ష విలువలు, ప్రస్తావించిన పదాలు ఇక్కడ కనిపిస్తాయి.",
+    reference_range: "సూచన పరిధి", source_flag: "నివేదిక సూచన", verify_against_source: "అసలు రికార్డుతో మళ్లీ తనిఖీ చేయండి.",
+    ai_reading_unavailable: "AI రీడింగ్ ఇంకా సెటప్ కాలేదు. మీరు అప్‌లోడ్ చేసిన ఫైల్ సేవ్ అయింది; నిర్వాహకుడిని సంప్రదించండి.",
     analyze: "పత్రాన్ని చదవండి", analyzing: "పత్రాన్ని చదువుతోంది…", review_required: "ఈ డ్రాఫ్ట్‌ను తనిఖీ చేయండి",
     confirm_extraction: "వివరాలను నిర్ధారించండి", edit_details: "వివరాలను సవరించండి", extracted_text: "పత్రం నుంచి చదివిన వచనం",
     plain_summary: "సరళమైన భాషలో", medications: "మందులు", lab_values: "పరీక్ష ఫలితాలు",
@@ -244,6 +264,49 @@ function supportedMedicalObjectPath(value: string): boolean {
   return /^\/objects\/[A-Za-z0-9/_-]+$/.test(value);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isConfidence(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === null || typeof value === "string";
+}
+
+function isMedicineExtractionList(value: unknown): value is Array<Record<string, unknown>> {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item) &&
+    typeof item.name === "string" && item.name.trim().length > 0 &&
+    isOptionalString(item.dose) &&
+    isOptionalString(item.frequency) &&
+    isOptionalString(item.duration) &&
+    isConfidence(item.confidence) &&
+    typeof item.uncertain === "boolean"
+  );
+}
+
+function isLabValueExtractionList(value: unknown): value is Array<Record<string, unknown>> {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item) &&
+    typeof item.name === "string" && item.name.trim().length > 0 &&
+    ((typeof item.value === "string" && item.value.trim().length > 0) ||
+      (typeof item.value === "number" && Number.isFinite(item.value))) &&
+    isOptionalString(item.unit) &&
+    isOptionalString(item.referenceRange) &&
+    isOptionalString(item.flag) &&
+    isConfidence(item.confidence)
+  );
+}
+
+function normalizeDocumentDate(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value ? null : value;
+}
+
 router.get("/profile", requirePatient, async (req, res): Promise<void> => {
   const profile = asRequest(req).altrixProfile!;
   res.json(
@@ -279,21 +342,15 @@ router.get("/translations/:locale", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Unsupported language" });
     return;
   }
-  const current = await db
-    .select({ id: translationsTable.id })
-    .from(translationsTable)
-    .limit(1);
-  if (!current.length) {
-    const rows = locales.flatMap((locale) =>
-      Object.entries(translationSeed[locale]).map(([translationKey, value]) => ({
-        id: `${locale}:${translationKey}`,
-        locale,
-        translationKey,
-        value,
-      })),
-    );
-    await db.insert(translationsTable).values(rows).onConflictDoNothing();
-  }
+  const seedRows = locales.flatMap((locale) =>
+    Object.entries(translationSeed[locale]).map(([translationKey, value]) => ({
+      id: `${locale}:${translationKey}`,
+      locale,
+      translationKey,
+      value,
+    })),
+  );
+  await db.insert(translationsTable).values(seedRows).onConflictDoNothing();
   const rows = await db
     .select({
       key: translationsTable.translationKey,
@@ -418,8 +475,8 @@ router.post("/documents/:id/analyze", requirePatient, async (req, res): Promise<
       ta: "Tamil",
       te: "Telugu",
     }[body.data.locale];
-    const instructions = `You are a careful medical-document reader. Read only the supplied medical report or prescription; do not infer missing facts, diagnose the patient, recommend treatment, or change medication instructions. A handwritten document may be ambiguous: mark unclear text as uncertain and never guess a drug name or dose. Return a single JSON object with keys extractedText, documentType, documentDate, medicines (array of objects with name, dose, frequency, duration, confidence from 0 to 1, and uncertain boolean), labValues (array of objects with name, value, unit, referenceRange, flag, confidence from 0 to 1), diagnosesOrTerms (array of strings copied from the document), overallConfidence (0 to 1), and summary. Write the plain-language summary in ${targetLanguage}. State when information is unclear. Do not interpret abnormal results as a diagnosis.`;
-    const prompt = `Read this ${document.documentType.replaceAll("_", " ")}. Extract only legible information. Keep medicine names, doses, dates, and test values faithful to the source. If this is not a medical report or prescription, return JSON with extractedText set to an empty string, overallConfidence 0, and summary exactly "This file does not appear to be a medical report or prescription."`;
+    const instructions = `You are a careful medical-document reader. Read only the supplied medical report or prescription; do not infer missing facts, diagnose the patient, recommend treatment, or change medication instructions. Never guess a medicine name, dose, date, lab value, unit, or reference range. Use null when a field is not stated or not legible. For handwriting, mark the affected medicine as uncertain=true, lower its confidence, and plainly say when text is unclear. Return one JSON object with exactly these keys: extractedText (string), documentType, documentDate (ISO date YYYY-MM-DD or null), medicines (array of objects with name, dose, frequency, duration, confidence from 0 to 1, uncertain boolean), labValues (array of objects with name, value, unit, referenceRange, flag, confidence from 0 to 1), diagnosesOrTerms (array of terms copied from the source, not inferred diagnoses), overallConfidence (0 to 1), and summary. Write a short, simple-language summary in ${targetLanguage}. For a result explicitly flagged by the document or clearly outside a printed reference range, explain only that it is above or below the range shown, repeat the source value, unit, and range accurately, and say that a result alone is not a diagnosis and should be interpreted by a clinician. Do not guess why a value is outside range or label it abnormal without source support. If a range or flag is unclear, say it needs review.`;
+    const prompt = `Read this ${document.documentType.replaceAll("_", " ")}. Extract only legible information, preserve the source wording and values, and use null for missing or unreadable details. If this is not a medical report or prescription, return JSON with extractedText set to an empty string, empty medicines/labValues/diagnosesOrTerms arrays, overallConfidence 0, documentDate null, and summary exactly "This file does not appear to be a medical report or prescription."`;
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const content =
       mimeType === "application/pdf"
@@ -450,23 +507,26 @@ router.post("/documents/:id/analyze", requirePatient, async (req, res): Promise<
     const extracted = JSON.parse(responseText) as Record<string, unknown>;
     if (
       typeof extracted.summary !== "string" ||
+      extracted.summary.trim().length === 0 ||
       typeof extracted.extractedText !== "string" ||
-      typeof extracted.overallConfidence !== "number" ||
-      !Array.isArray(extracted.medicines) ||
-      !Array.isArray(extracted.labValues)
+      !isConfidence(extracted.overallConfidence) ||
+      !isMedicineExtractionList(extracted.medicines) ||
+      !isLabValueExtractionList(extracted.labValues) ||
+      !Array.isArray(extracted.diagnosesOrTerms) ||
+      !extracted.diagnosesOrTerms.every((term) => typeof term === "string")
     ) {
       throw new Error("The analysis response did not match the expected structure");
     }
-    const confidence = Math.max(0, Math.min(1, extracted.overallConfidence));
+    const confidence = extracted.overallConfidence;
     const isMedical = extracted.extractedText.trim().length > 0;
     const extraction = {
       documentType: medicalDocumentTypes.includes(extracted.documentType as (typeof medicalDocumentTypes)[number])
         ? extracted.documentType
         : document.documentType,
-      documentDate: typeof extracted.documentDate === "string" ? extracted.documentDate : null,
+      documentDate: normalizeDocumentDate(extracted.documentDate),
       medicines: extracted.medicines,
       labValues: extracted.labValues,
-      diagnosesOrTerms: Array.isArray(extracted.diagnosesOrTerms) ? extracted.diagnosesOrTerms : [],
+      diagnosesOrTerms: extracted.diagnosesOrTerms,
       overallConfidence: confidence,
     };
     const [updated] = await db

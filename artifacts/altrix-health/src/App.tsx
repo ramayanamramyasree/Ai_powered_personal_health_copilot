@@ -236,12 +236,11 @@ function PortalPage() {
     if (!file) return;
     setUploadMessage('');
     setUploadFailed(false);
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-    if (!allowed.includes(file.type)) { setUploadMessage('Choose a PDF, JPG, PNG, or WEBP file.'); setUploadFailed(true); event.target.value = ''; return; }
     if (file.size > 15_000_000) { setUploadMessage('This file is larger than 15 MB. Please choose a smaller one.'); setUploadFailed(true); event.target.value = ''; return; }
     try {
-      const { uploadURL, objectPath } = await uploadUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf' } });
-      const response = await fetch(uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      const contentType = await detectMedicalFileType(file);
+      const { uploadURL, objectPath } = await uploadUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType } });
+      const response = await fetch(uploadURL, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file });
       if (!response.ok) throw new Error('The file could not be uploaded.');
       const created = await createDoc.mutateAsync({ data: { fileName: file.name, objectPath, documentType } });
       await invalidateDocuments();
@@ -280,6 +279,7 @@ function PortalPage() {
     if (!selected || !window.confirm(`Remove “${selected.fileName}” from your records?`)) return;
     remove.mutate({ id: selected.id }, { onSuccess: () => { setSelectedId(null); invalidateDocuments(); } });
   };
+  const timelineDocuments = sortDocumentsByEventDate(docs.data || []);
   const pending = docs.data?.filter((d) => d.requiresReview || d.status === 'review_required').length || 0;
   const pageLoading = profileLoading || (!!profile && docs.isLoading);
   if (profileLoading) return <LoadingShell />;
@@ -300,14 +300,16 @@ function PortalPage() {
         </section>
         <section className="timeline-card soft-card">
           <div className="section-title-row"><div><div className="eyebrow">{tr('records_in_order', 'YOUR RECORDS, IN ORDER')}</div><h2 className="display">{tr('timeline')}</h2></div><span className="record-count">{docs.data?.length || 0} {docs.data?.length === 1 ? tr('record', 'record') : tr('records', 'records')}</span></div>
-          {docs.isLoading ? <div className="document-skeleton"><i /><i /><i /></div> : docs.data?.length ? <div className="timeline-list">{docs.data.map((doc) => <DocumentTimelineItem translate={tr} key={doc.id} doc={doc} active={doc.id === selectedId} onClick={() => { setSelectedId(doc.id); setUploadMessage(''); }} />)}</div> : <div className="empty-records"><span className="empty-art"><FileImage size={25} /></span><h3>{tr('emptyTitle')}</h3><p>{tr('emptyBody')}</p><button className="text-action" onClick={() => fileRef.current?.click()} data-testid="button-add-first-record">{tr('add_first_record', 'Add your first record')} <ArrowRight size={15} /></button></div>}
+          {docs.isLoading ? <div className="document-skeleton"><i /><i /><i /></div> : docs.data?.length ? <div className="timeline-list">{timelineDocuments.map((doc) => <DocumentTimelineItem translate={tr} locale={locale} key={doc.id} doc={doc} active={doc.id === selectedId} onClick={() => { setSelectedId(doc.id); setUploadMessage(''); }} />)}</div> : <div className="empty-records"><span className="empty-art"><FileImage size={25} /></span><h3>{tr('emptyTitle')}</h3><p>{tr('emptyBody')}</p><button className="text-action" onClick={() => fileRef.current?.click()} data-testid="button-add-first-record">{tr('add_first_record', 'Add your first record')} <ArrowRight size={15} /></button></div>}
         </section>
+        {!!docs.data?.length && <HealthProfileCard translate={tr} locale={locale} documents={timelineDocuments} />}
       </div>
       <div className="portal-secondary">
         <section className="review-card">
           <div className="review-head"><div><div className="eyebrow">{tr('patient_review', 'PATIENT REVIEW')}</div><h2 className="display">{tr('summary')}</h2></div><span className="review-count">{pending}<small>{tr('to_review', 'to review')}</small></span></div>
           {selected ? <ReviewPanel translate={tr} doc={selected} locale={locale} summary={summaryDraft} onSummary={setSummaryDraft} extraction={extractionDraft} onExtraction={setExtractionDraft} reviewed={reviewed} onReviewed={setReviewed} onAnalyze={analyzeSelected} onConfirm={confirmSelected} analyzing={analyze.isPending} confirming={confirm.isPending} onDelete={removeSelected} deleting={remove.isPending} /> : <div className="review-empty"><span className="review-empty-icon"><Sparkles size={19} /></span><b>{tr('understanding_terms', 'Understanding, on your terms.')}</b><p>{tr('choose_record_prompt', 'Choose a record from your timeline, or ask Altrix to prepare a draft summary after you upload one.')}</p></div>}
-          {(analyze.isError || confirm.isError || remove.isError) && <div className="inline-message message-error">That didn’t save. Your record is unchanged—please try again.</div>}
+          {analyze.isError && <div className="inline-message message-error" role="alert">{getAnalysisErrorMessage(analyze.error, tr)}</div>}
+          {(confirm.isError || remove.isError) && <div className="inline-message message-error" role="alert">That didn’t save. Your record is unchanged—please try again.</div>}
           {uploadMessage === 'Your review has been saved.' && <div className="inline-message" role="status">{uploadMessage}</div>}
         </section>
         <FeedbackCard translate={tr} open={feedbackOpen} setOpen={setFeedbackOpen} items={feedback.data || []} loading={feedback.isLoading} failed={feedback.isError} message={feedbackText} setMessage={setFeedbackText} category={feedbackCategory} setCategory={setFeedbackCategory} rating={feedbackRating} setRating={setFeedbackRating} pending={createFeedback.isPending} success={createFeedback.isSuccess} onSubmit={() => {
@@ -320,10 +322,133 @@ function PortalPage() {
   </AppShell>;
 }
 
-function DocumentTimelineItem({ translate, doc, active, onClick }: { translate: Translate; doc: MedicalDocument; active: boolean; onClick: () => void }) {
+function DocumentTimelineItem({ translate, locale, doc, active, onClick }: { translate: Translate; locale: Locale; doc: MedicalDocument; active: boolean; onClick: () => void }) {
   const name: Record<string, string> = { prescription: translate('prescription', 'Prescription'), lab_report: translate('lab_report', 'Lab report'), discharge_summary: translate('discharge_summary', 'Discharge summary'), diagnostic_report: translate('diagnostic_report', 'Diagnostic report'), other: translate('health_record', 'Health record') };
   const status: Record<string, string> = { uploaded: translate('added', 'Added'), processing: translate('preparing_draft', 'Preparing draft'), review_required: translate('review_required', 'Needs your review'), confirmed: translate('patient_confirmed', 'Patient confirmed'), failed: translate('could_not_process', 'Could not process') };
-  return <button className={`timeline-item ${active ? 'selected' : ''}`} onClick={onClick} data-testid={`button-record-${doc.id}`}><span className="timeline-marker">{doc.status === 'confirmed' ? <Check size={13} /> : <FileText size={13} />}</span><span className="timeline-info"><b>{doc.fileName}</b><small>{name[doc.documentType] || 'Health record'} <i>·</i> {new Date(doc.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</small></span><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : doc.status === 'confirmed' ? 'status-confirmed' : ''}`}><i />{status[doc.status] || doc.status}</span></button>;
+  const documentDate = parseDocumentDate(doc);
+  const shownDate = documentDate || new Date(doc.createdAt);
+  const dateLabel = documentDate ? translate('document_date', 'Report date') : translate('uploaded', 'Uploaded');
+  return <button className={`timeline-item ${active ? 'selected' : ''}`} onClick={onClick} data-testid={`button-record-${doc.id}`}><span className="timeline-marker">{doc.status === 'confirmed' ? <Check size={13} /> : <FileText size={13} />}</span><span className="timeline-info"><b>{doc.fileName}</b><small>{name[doc.documentType] || 'Health record'} <i>·</i> {dateLabel}: {shownDate.toLocaleDateString(localeTag[locale], { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</small></span><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : doc.status === 'confirmed' ? 'status-confirmed' : ''}`}><i />{status[doc.status] || doc.status}</span></button>;
+}
+
+type HealthProfileFact = {
+  id: string;
+  title: string;
+  details: string[];
+  date: Date;
+  uncertain?: boolean;
+};
+
+function HealthProfileCard({ translate, locale, documents }: { translate: Translate; locale: Locale; documents: MedicalDocument[] }) {
+  const confirmedDocuments = documents.filter((doc) => doc.status === 'confirmed');
+  const groups = [
+    { key: 'medications', title: translate('medications', 'Medicines'), facts: [] as HealthProfileFact[] },
+    { key: 'lab_values', title: translate('lab_values', 'Test results'), facts: [] as HealthProfileFact[] },
+    { key: 'diagnoses', title: translate('diagnoses', 'Terms mentioned'), facts: [] as HealthProfileFact[] },
+  ];
+
+  for (const doc of confirmedDocuments) {
+    const extraction = asRecord(doc.extraction);
+    if (!extraction) continue;
+    const date = parseDocumentDate(doc) || new Date(doc.createdAt);
+    const medicines = Array.isArray(extraction.medicines) ? extraction.medicines : [];
+    for (const [index, value] of medicines.entries()) {
+      const medicine = asRecord(value);
+      const title = readFactText(medicine?.name);
+      if (!title) continue;
+      const details = [medicine?.dose, medicine?.frequency, medicine?.duration]
+        .map(readFactText)
+        .filter((detail): detail is string => !!detail);
+      if (medicine?.uncertain === true) details.push(translate('unclear', 'Unclear — check the original'));
+      groups[0].facts.push({ id: `${doc.id}-medicine-${index}`, title, details, date, uncertain: medicine?.uncertain === true });
+    }
+
+    const labValues = Array.isArray(extraction.labValues) ? extraction.labValues : [];
+    for (const [index, value] of labValues.entries()) {
+      const lab = asRecord(value);
+      const title = readFactText(lab?.name);
+      const result = readFactText(lab?.value);
+      if (!title || !result) continue;
+      const details = [
+        [result, readFactText(lab?.unit)].filter(Boolean).join(' '),
+        readFactText(lab?.referenceRange) ? `${translate('reference_range', 'Reference range')}: ${readFactText(lab?.referenceRange)}` : '',
+        readFactText(lab?.flag) ? `${translate('source_flag', 'Report flag')}: ${readFactText(lab?.flag)}` : '',
+      ].filter(Boolean);
+      groups[1].facts.push({ id: `${doc.id}-lab-${index}`, title, details, date });
+    }
+
+    const terms = Array.isArray(extraction.diagnosesOrTerms) ? extraction.diagnosesOrTerms : [];
+    for (const [index, value] of terms.entries()) {
+      const title = readFactText(value);
+      if (title) groups[2].facts.push({ id: `${doc.id}-term-${index}`, title, details: [], date });
+    }
+  }
+
+  const visibleGroups = groups.filter((group) => group.facts.length);
+  return <section className="health-profile-card soft-card" data-testid="health-profile">
+    <div className="section-title-row"><div><div className="eyebrow">{translate('reviewed_health_facts', 'FROM RECORDS YOU CONFIRMED')}</div><h2 className="display">{translate('health_profile', 'Your health profile')}</h2></div></div>
+    <p className="health-profile-note">{translate('health_profile_safety', 'Only details from records you confirmed appear here. Lab flags are copied from the report; they are not diagnoses.')}</p>
+    {visibleGroups.length ? <div className="health-profile-groups">{visibleGroups.map((group) => <section className="health-profile-group" key={group.key}>
+      <h3>{group.title}</h3>
+      <ul>{group.facts.sort((a, b) => b.date.getTime() - a.date.getTime()).map((fact) => <li className="health-profile-fact" key={fact.id}>
+        <span><b>{fact.title}</b>{fact.details.length > 0 && <small>{fact.details.join(' · ')}</small>}{fact.uncertain && <em>{translate('verify_against_source', 'Please verify against the original record.')}</em>}</span>
+        <time dateTime={fact.date.toISOString()}>{fact.date.toLocaleDateString(localeTag[locale], { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time>
+      </li>)}</ul>
+    </section>)}</div> : <p className="health-profile-empty">{translate('health_profile_empty', 'Reviewed medicines, test values, and terms will appear here after you confirm an extracted record.')}</p>}
+  </section>;
+}
+
+const localeTag: Record<Locale, string> = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN' };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function readFactText(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function parseDocumentDate(doc: MedicalDocument): Date | null {
+  const raw = readFactText(asRecord(doc.extraction)?.documentDate);
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const parsed = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw ? null : parsed;
+}
+
+function sortDocumentsByEventDate(documents: MedicalDocument[]): MedicalDocument[] {
+  return [...documents].sort((a, b) => {
+    const eventDifference = (parseDocumentDate(b)?.getTime() ?? Date.parse(b.createdAt)) - (parseDocumentDate(a)?.getTime() ?? Date.parse(a.createdAt));
+    return eventDifference || Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  });
+}
+
+function getAnalysisErrorMessage(error: unknown, translate: Translate): string {
+  const payload = asRecord(asRecord(error)?.data);
+  if (payload?.error === 'AI document reading is not configured') {
+    return translate('ai_reading_unavailable', 'AI reading is not set up yet. Your uploaded file is saved; please contact the administrator.');
+  }
+  return translate('analyze_error', 'We could not read this file. Please try again later.');
+}
+
+type MedicalFileType = 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp';
+
+async function detectMedicalFileType(file: File): Promise<MedicalFileType> {
+  const bytes = new Uint8Array(await file.slice(0, 1024).arrayBuffer());
+  const header = new TextDecoder().decode(bytes);
+  let detected: MedicalFileType | null = null;
+  if (/^%PDF-/m.test(header)) detected = 'application/pdf';
+  else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) detected = 'image/jpeg';
+  else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) detected = 'image/png';
+  else if (header.startsWith('RIFF') && header.slice(8, 12) === 'WEBP') detected = 'image/webp';
+  if (!detected) throw new Error('This file could not be verified as a PDF, JPG, PNG, or WebP image.');
+  const declared = file.type.toLowerCase();
+  const normalizedDeclared = declared === 'image/jpg' || declared === 'image/pjpeg' ? 'image/jpeg' : declared;
+  if (normalizedDeclared && normalizedDeclared !== 'application/octet-stream' && normalizedDeclared !== detected) {
+    throw new Error('The selected file contents do not match its declared file type.');
+  }
+  return detected;
 }
 
 function ReviewPanel({ translate, doc, locale, summary, onSummary, extraction, onExtraction, reviewed, onReviewed, onAnalyze, onConfirm, analyzing, confirming, onDelete, deleting }: {

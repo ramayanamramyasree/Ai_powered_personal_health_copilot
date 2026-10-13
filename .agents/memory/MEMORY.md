@@ -1,1 +1,2 @@
 - [AI provider choice](ai-provider-choice.md) — use the user's OpenAI key; do not retry the declined Replit AI billing option.
+- [Preserve Altrix screens](health-copilot-scope.md) — continue the existing health app and avoid replacing or redesigning working screens.

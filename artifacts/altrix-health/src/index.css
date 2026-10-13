@@ -200,3 +200,15 @@
 .language-draft-note svg { color: #69816c; flex: 0 0 auto; }
 .language-draft-note button { border: 0; background: transparent; color: #4f765d; font-size: 8px; font-weight: 800; margin-left: auto; white-space: nowrap; }
 .summary-editor[readonly], .extraction-editor[readonly] { background: #f0eee4; color: #677369; cursor: default; }
+.health-profile-card { display: grid; gap: 12px; }
+.health-profile-note, .health-profile-empty { margin: 0; color: #68776d; font-size: 12px; line-height: 1.55; }
+.health-profile-groups { display: grid; gap: 14px; }
+.health-profile-group { min-width: 0; }
+.health-profile-group h3 { margin: 0 0 7px; color: #526b5a; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.health-profile-group ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.health-profile-fact { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 11px; border: 1px solid rgba(88, 113, 94, .12); border-radius: 12px; background: rgba(255, 255, 255, .48); }
+.health-profile-fact > span { display: grid; gap: 3px; min-width: 0; }
+.health-profile-fact b { color: #34483b; font-size: 12px; overflow-wrap: anywhere; }
+.health-profile-fact small, .health-profile-fact em, .health-profile-fact time { color: #737c70; font-size: 10px; line-height: 1.45; }
+.health-profile-fact em { color: #93614c; font-style: normal; }
+.health-profile-fact time { flex: 0 0 auto; white-space: nowrap; }
