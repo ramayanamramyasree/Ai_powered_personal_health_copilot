@@ -1,0 +1,46 @@
+Update my existing AI-Powered Personal Health Copilot (Altrix Health Copilot) project to provide completely separate Patient Login and Admin Login pages. Preserve the existing UI, database, authentication, medical records, OCR, and other working features.
+
+### 1. Patient Login Page
+- Create a dedicated `/patient/login` page.
+- Include email and password fields, Show/Hide Password, Remember Me, Forgot Password, and Login buttons.
+- Provide links to Patient Registration and password recovery.
+- After successful authentication, redirect patients to `/patient/dashboard`.
+- Patients must be able to access only their own medical records, reports, health timeline, profile, and settings.
+- Display clear validation messages for invalid credentials and other errors.
+
+### 2. Admin Login Page
+- Create a separate `/admin/login` page with a professional administrator interface.
+- Include email, password, Show/Hide Password, and Forgot Password.
+- Do not provide public admin registration.
+- Allow administrator access only to explicitly authorized admin accounts.
+- Verify administrator authorization on the backend using secure role-based access control. Use the existing `ALTRIX_ADMIN_EMAIL` environment variable where appropriate, together with verified identity and server-side role checks.
+- After successful authentication, redirect authorized administrators to `/admin/dashboard`.
+- If a patient attempts to access the admin dashboard, deny access and redirect them to the appropriate login page.
+- If an unauthorized user attempts admin login, display a generic access-denied message without revealing account details.
+
+### 3. Login Landing Page
+- Create a `/login` landing page with two distinct cards:
+  1. Patient Login
+  2. Administrator Login
+- Each card must have a separate button that navigates to the corresponding login page.
+- Add a Back to Home button and consistent branding across both pages.
+
+### 4. Security Requirements
+- Reuse the existing authentication provider and database wherever possible.
+- Do not create duplicate authentication systems.
+- Enforce authentication and authorization on protected backend endpoints, not only in the frontend.
+- Use secure password hashing, session handling, and logout functionality through the existing authentication framework.
+- Prevent patients from accessing administrator routes and prevent users from accessing another patient's data.
+- Keep API keys and credentials in Replit Secrets.
+- Preserve the existing forgot-password and recovery-code workflow. Ensure it works for the correct account type.
+- Do not hardcode passwords or expose secrets in frontend code.
+
+### 5. Testing and Completion
+- Test patient login, registration, logout, and password recovery.
+- Test admin login and admin-only route protection.
+- Verify that patient accounts cannot access admin pages.
+- Verify that admin accounts cannot access patient records unless a separate, explicitly authorized workflow exists.
+- Test page navigation, validation messages, responsive design, and application startup.
+- Preserve all existing working features and modify only the files required.
+
+First inspect the existing project structure and authentication implementation. Then implement the changes incrementally, fix any actual errors, and report which features have been tested successfully.
