@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, Show, SignIn, SignUp, useAuth, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
@@ -91,7 +91,7 @@ function Landing() {
     <header className="landing-nav wrap">
       <Brand />
       <nav className="landing-links"><a href="#how-it-works">How it works</a><a href="#privacy">Your privacy</a></nav>
-      <div className="nav-actions"><Link className="nav-signin" href="/login">Sign in</Link><Link className="btn btn-primary nav-cta" href="/patient/register">Get started <ArrowRight size={16} /></Link></div>
+      <div className="nav-actions"><LocaleSelector compact /><Link className="nav-signin" href="/login">Sign in</Link><Link className="btn btn-primary nav-cta" href="/patient/register">Get started <ArrowRight size={16} /></Link></div>
     </header>
     <section className="hero wrap">
       <div className="hero-copy fade-up">
@@ -143,7 +143,7 @@ type AccountType = 'patient' | 'admin';
 
 function LoginLanding() {
   return <main className="login-choice-screen grain">
-    <header className="login-choice-nav wrap"><Brand /><Link href="/" className="login-back-link" data-testid="link-back-home"><ArrowRight size={15} className="back-arrow" /> Back to home</Link></header>
+    <header className="login-choice-nav wrap"><Brand /><div className="nav-actions"><LocaleSelector compact /><Link href="/" className="login-back-link" data-testid="link-back-home"><ArrowRight size={15} className="back-arrow" /> Back to home</Link></div></header>
     <section className="login-choice-content wrap">
       <div className="login-choice-heading"><div className="eyebrow">ALTRIX HEALTH COPILOT</div><h1 className="display">Welcome to your<br /><em>Altrix space.</em></h1><p>Choose the secure sign-in for your account.</p></div>
       <div className="login-choice-cards">
@@ -168,7 +168,7 @@ function LoginLanding() {
 
 function AuthPage({ role = 'patient', signUp = false, signInPath, signUpPath }: { role?: AccountType; signUp?: boolean; signInPath: string; signUpPath: string }) {
   const isAdmin = role === 'admin';
-  return <div className="auth-screen grain"><div className="auth-side"><Brand dark /><div className="auth-side-copy"><span className="eyebrow">{isAdmin ? 'Authorized access only' : signUp ? 'A little more clarity' : 'Your private health space'}</span><h1 className="display">{isAdmin ? <>Care, at a<br /><em>glance.</em></> : <>Your health story,<br /><em>in your hands.</em></>}</h1><p>{isAdmin ? 'A secure workspace for explicitly authorized Altrix administrators.' : 'A private place to bring your records together, understand them, and prepare for the conversations that matter.'}</p><div className="auth-assurance"><ShieldCheck size={18} /> {isAdmin ? 'Verified administrator access only.' : 'Patient-led. Private by design.'}</div></div><div className="auth-side-foot">ALTRIX LABS <span>·</span> HEALTH COPILOT</div></div><div className={`auth-form-zone ${isAdmin ? 'admin-auth-form-zone' : ''}`}><div className="auth-mobile-brand"><Brand /></div><div className="auth-mode-title"><span className="eyebrow">{isAdmin ? 'ADMINISTRATOR' : 'PATIENT ACCOUNT'}</span><h2 className="display">{signUp ? 'Create your private space' : isAdmin ? 'Administrator sign in' : 'Welcome back'}</h2><p>{isAdmin ? 'Sign in with an authorized administrator account.' : signUp ? 'Your health records stay private to you.' : 'Continue to your health records and timeline.'}</p></div>{signUp ? <SignUp routing="path" path={`${basePath}${signUpPath}`} signInUrl={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}/patient/dashboard`} /> : <SignIn routing="path" path={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} fallbackRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} signUpUrl={isAdmin ? '' : `${basePath}${signUpPath}`} withSignUp={!isAdmin} appearance={isAdmin ? { elements: { footerAction: { display: 'none' } } } : undefined} />}<p className="auth-note"><LockKeyhole size={13} /> {isAdmin ? 'Administrator access is verified on the Altrix server.' : 'Your health information is personal. We treat it that way.'}</p>{!isAdmin && !signUp && <Link className="auth-back-link" href="/patient/register" data-testid="link-patient-registration">New patient? Create an account</Link>}{!signUp && <Link className="auth-back-link" href={isAdmin ? '/login' : '/login'} data-testid="link-auth-back">Back to sign-in choices</Link>}</div><EmergencyNotice /></div>;
+  return <div className="auth-screen grain"><div className="auth-side"><Brand dark /><div className="auth-side-copy"><span className="eyebrow">{isAdmin ? 'Authorized access only' : signUp ? 'A little more clarity' : 'Your private health space'}</span><h1 className="display">{isAdmin ? <>Care, at a<br /><em>glance.</em></> : <>Your health story,<br /><em>in your hands.</em></>}</h1><p>{isAdmin ? 'A secure workspace for explicitly authorized Altrix administrators.' : 'A private place to bring your records together, understand them, and prepare for the conversations that matter.'}</p><div className="auth-assurance"><ShieldCheck size={18} /> {isAdmin ? 'Verified administrator access only.' : 'Patient-led. Private by design.'}</div></div><div className="auth-side-foot">ALTRIX LABS <span>·</span> HEALTH COPILOT</div></div><div className={`auth-form-zone ${isAdmin ? 'admin-auth-form-zone' : ''}`}><div className="auth-mobile-brand"><Brand /></div><div className="auth-locale-control"><LocaleSelector compact /></div><div className="auth-mode-title"><span className="eyebrow">{isAdmin ? 'ADMINISTRATOR' : 'PATIENT ACCOUNT'}</span><h2 className="display">{signUp ? 'Create your private space' : isAdmin ? 'Administrator sign in' : 'Welcome back'}</h2><p>{isAdmin ? 'Sign in with an authorized administrator account.' : signUp ? 'Your health records stay private to you.' : 'Continue to your health records and timeline.'}</p></div>{signUp ? <SignUp routing="path" path={`${basePath}${signUpPath}`} signInUrl={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}/patient/dashboard`} /> : <SignIn routing="path" path={`${basePath}${signInPath}`} forceRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} fallbackRedirectUrl={`${basePath}${isAdmin ? '/admin/dashboard' : '/patient/dashboard'}`} signUpUrl={isAdmin ? '' : `${basePath}${signUpPath}`} withSignUp={!isAdmin} appearance={isAdmin ? { elements: { footerAction: { display: 'none' } } } : undefined} />}<p className="auth-note"><LockKeyhole size={13} /> {isAdmin ? 'Administrator access is verified on the Altrix server.' : 'Your health information is personal. We treat it that way.'}</p>{!isAdmin && !signUp && <Link className="auth-back-link" href="/patient/register" data-testid="link-patient-registration">New patient? Create an account</Link>}{!signUp && <Link className="auth-back-link" href={isAdmin ? '/login' : '/login'} data-testid="link-auth-back">Back to sign-in choices</Link>}</div><EmergencyNotice /></div>;
 }
 
 function AccessDeniedPage() {
@@ -195,8 +195,182 @@ const labels: Record<string, string> = {
   urgent: 'For urgent or emergency care, contact your local emergency services. Altrix is not an emergency service.',
 };
 
+const supportedLocales = ['en', 'hi', 'ta', 'te'] as const;
+const localeStorageKey = 'altrix-locale';
+const pendingLocaleKey = 'altrix-pending-locale';
+type LocaleState = { locale: Locale; setLocale: (locale: Locale) => void };
+type LocaleContextValue = {
+  locale: Locale;
+  dictionary: Record<string, string>;
+  translate: Translate;
+  changeLocale: (locale: Locale) => void;
+};
+const LocaleStateContext = createContext<LocaleState | null>(null);
+const LocaleContext = createContext<LocaleContextValue | null>(null);
+
+function isLocale(value: string | null): value is Locale {
+  return !!value && supportedLocales.includes(value as Locale);
+}
+
+function useLocaleState() {
+  const value = useContext(LocaleStateContext);
+  if (!value) throw new Error('Locale state is unavailable');
+  return value;
+}
+
+function useAltrixLocale() {
+  const value = useContext(LocaleContext);
+  if (!value) throw new Error('Locale translations are unavailable');
+  return value;
+}
+
+function LocaleSelector({ compact = false }: { compact?: boolean }) {
+  const { locale, changeLocale, translate } = useAltrixLocale();
+  return <label className={`locale-control ${compact ? 'locale-control-compact' : ''}`}>
+    <Languages size={16} /><span className="sr-only">{translate('language', 'Language')}</span>
+    <select aria-label={translate('language', 'Language')} value={locale} onChange={(event) => changeLocale(event.target.value as Locale)} data-testid="select-language">
+      {Object.entries(languages).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+    </select><ChevronDown size={14} />
+  </label>;
+}
+
+const translatedTextNodes = new WeakMap<Text, { source: string; rendered: string }>();
+const translatedAttributes = new WeakMap<Element, Map<string, { source: string; rendered: string }>>();
+const translatedAttributesOfInterest = ['aria-label', 'placeholder', 'title', 'alt'];
+const excludedUiTags = new Set(['SCRIPT', 'STYLE', 'PRE', 'CODE']);
+
+function translateUiNode(node: Text, dictionary: Record<string, string>) {
+  const parent = node.parentElement;
+  if (!parent || excludedUiTags.has(parent.tagName) || parent.closest('[data-no-translate], [contenteditable="true"]')) return;
+  const current = node.nodeValue || '';
+  const previous = translatedTextNodes.get(node);
+  const source = previous && current === previous.rendered ? previous.source : current;
+  const trimmed = source.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return;
+  const translated = dictionary[`ui::${trimmed}`];
+  if (!translated) {
+    if (previous) translatedTextNodes.delete(node);
+    return;
+  }
+  const leading = source.match(/^\s*/)?.[0] || '';
+  const trailing = source.match(/\s*$/)?.[0] || '';
+  const rendered = `${leading}${translated}${trailing}`;
+  translatedTextNodes.set(node, { source, rendered });
+  if (rendered !== current) node.nodeValue = rendered;
+}
+
+function translateUiAttributes(element: Element, dictionary: Record<string, string>) {
+  if (element.closest('[data-no-translate]')) return;
+  let state = translatedAttributes.get(element);
+  if (!state) {
+    state = new Map();
+    translatedAttributes.set(element, state);
+  }
+  for (const name of translatedAttributesOfInterest) {
+    const current = element.getAttribute(name);
+    if (current === null) continue;
+    const previous = state.get(name);
+    const source = previous && current === previous.rendered ? previous.source : current;
+    const translated = dictionary[`ui::${source.replace(/\s+/g, ' ').trim()}`];
+    if (!translated) continue;
+    const rendered = `${source.slice(0, source.indexOf(source.trim()))}${translated}`;
+    state.set(name, { source, rendered });
+    if (rendered !== current) element.setAttribute(name, rendered);
+  }
+}
+
+function translateUiSubtree(root: Node, dictionary: Record<string, string>) {
+  const visitElement = (element: Element) => {
+    translateUiAttributes(element, dictionary);
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node: Node | null;
+    while ((node = walker.nextNode())) translateUiNode(node as Text, dictionary);
+  };
+  if (root instanceof Element) visitElement(root);
+  else if (root instanceof Text) translateUiNode(root, dictionary);
+  if (root instanceof Element) {
+    for (const element of root.querySelectorAll('*')) {
+      translateUiAttributes(element, dictionary);
+    }
+  }
+}
+
+function LocaleTranslationsProvider({ children }: { children: ReactNode }) {
+  const { locale, setLocale } = useLocaleState();
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+  const profile = useGetProfile({ query: { queryKey: getGetProfileQueryKey(), enabled: auth.isLoaded && !!auth.isSignedIn } });
+  const translations = useGetTranslations(locale, { query: { queryKey: getGetTranslationsQueryKey(locale) } });
+  const updateProfile = useUpdateProfile();
+  const syncPendingLocale = useRef<string | null>(null);
+  const dictionary = translations.data || {};
+  const changeLocale = (next: Locale) => {
+    if (!isLocale(next)) return;
+    setLocale(next);
+    localStorage.setItem(localeStorageKey, next);
+    localStorage.setItem(pendingLocaleKey, next);
+  };
+
+  useEffect(() => {
+    if (!auth.isLoaded || !auth.isSignedIn || !profile.data) return;
+    const pending = localStorage.getItem(pendingLocaleKey);
+    if (isLocale(pending)) {
+      setLocale(pending);
+      if (profile.data.locale === pending) {
+        localStorage.setItem(localeStorageKey, pending);
+        localStorage.removeItem(pendingLocaleKey);
+        syncPendingLocale.current = null;
+      } else if (syncPendingLocale.current !== pending) {
+        syncPendingLocale.current = pending;
+        updateProfile.mutate({ data: { locale: pending } }, {
+          onSuccess: () => {
+            localStorage.setItem(localeStorageKey, pending);
+            localStorage.removeItem(pendingLocaleKey);
+            syncPendingLocale.current = null;
+            queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+          },
+          onError: () => { syncPendingLocale.current = null; },
+        });
+      }
+      return;
+    }
+    const savedProfileLocale = isLocale(profile.data.locale) ? profile.data.locale : 'en';
+    setLocale(savedProfileLocale);
+    localStorage.setItem(localeStorageKey, savedProfileLocale);
+  }, [auth.isLoaded, auth.isSignedIn, profile.data?.locale, updateProfile.mutate, queryClient, setLocale]);
+
+  useEffect(() => {
+    document.documentElement.lang = localeTag[locale];
+    document.title = dictionary['ui::Altrix Health Copilot'] || 'Altrix Health Copilot';
+    const body = document.body;
+    let observer: MutationObserver;
+    const observe = () => observer.observe(body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: translatedAttributesOfInterest });
+    translateUiSubtree(body, dictionary);
+    observer = new MutationObserver((records) => {
+      observer.disconnect();
+      for (const record of records) {
+        if (record.type === 'characterData') translateUiNode(record.target as Text, dictionary);
+        else if (record.type === 'attributes' && record.target instanceof Element) translateUiAttributes(record.target, dictionary);
+        else for (const added of record.addedNodes) translateUiSubtree(added, dictionary);
+      }
+      observe();
+    });
+    observe();
+    return () => observer.disconnect();
+  }, [locale, translations.data]);
+
+  const value = useMemo<LocaleContextValue>(() => ({
+    locale,
+    dictionary,
+    translate: (key, fallback) => dictionary[key] || fallback || key,
+    changeLocale,
+  }), [locale, dictionary]);
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+}
+
 function AppShell({ children, profile, active = 'portal', translate = (_key, fallback) => fallback || _key }: { children: ReactNode; profile: Profile; active?: string; translate?: Translate }) {
   const { signOut } = useClerk();
+  const { locale } = useAltrixLocale();
   const health = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey() } });
   const [menuOpen, setMenuOpen] = useState(false);
   return <div className="app-layout">
@@ -205,21 +379,19 @@ function AppShell({ children, profile, active = 'portal', translate = (_key, fal
       <Link href="/portal" className={`side-link ${active === 'portal' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}><LayoutDashboard size={18} /> {translate('overview', 'Overview')}</Link>
       {profile.role === 'admin' && <Link href="/admin" className={`side-link ${active === 'admin' ? 'active' : ''}`} onClick={() => setMenuOpen(false)}><BarChart3 size={18} /> {translate('lab_overview', 'Lab overview')}</Link>}
       <div className="side-bottom"><div className="side-security"><ShieldCheck size={17} /><span><b>{translate('privacy_ownership', 'Your information stays yours')}</b><small>{translate('private_patient_led', 'Private and patient-led')}</small></span></div>
-        <button className="profile-switch" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out"><span className="profile-avatar">{(profile.name || profile.email || 'A')[0].toUpperCase()}</span><span className="profile-meta"><b>{profile.name || 'Your account'}</b><small>{profile.email}</small></span><LogOut size={16} /></button>
+        <button className="profile-switch" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out"><span className="profile-avatar">{(profile.name || profile.email || 'A')[0].toUpperCase()}</span><span className="profile-meta"><b data-no-translate>{profile.name || 'Your account'}</b><small data-no-translate>{profile.email}</small></span><LogOut size={16} /></button>
       </div>
     </aside>
     {menuOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="app-main"><header className="app-topbar"><button className="mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div><span className="topbar-kicker">ALTRIX HEALTH COPILOT</span><span className="topbar-date">{new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</span></div><div className="topbar-right"><span className="topbar-private"><span className="live-dot" /> {health.isError ? 'Connection unavailable' : health.data ? 'Private space · connected' : 'Private space'}</span><span className="topbar-initial">{(profile.name || 'A')[0].toUpperCase()}</span></div></header><main className="app-content">{children}</main></div>
+     <div className="app-main"><header className="app-topbar"><button className="mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div><span className="topbar-kicker">ALTRIX HEALTH COPILOT</span><span className="topbar-date">{new Intl.DateTimeFormat(localeTag[locale], { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}</span></div><div className="topbar-right"><span className="topbar-private"><span className="live-dot" /> {health.isError ? 'Connection unavailable' : health.data ? 'Private space · connected' : 'Private space'}</span>{active === 'admin' && <LocaleSelector compact />}<span className="topbar-initial">{(profile.name || 'A')[0].toUpperCase()}</span></div></header><main className="app-content">{children}</main></div>
   </div>;
 }
 
 function PortalPage() {
   const queryClient = useQueryClient();
   const { data: profile, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useGetProfile();
-  const [localeDraft, setLocaleDraft] = useState<Locale>('en');
-  const locale = (localeDraft || profile?.locale || 'en') as Locale;
-  const translations = useGetTranslations(locale, { query: { queryKey: getGetTranslationsQueryKey(locale), enabled: !!profile } });
-  const tr: Translate = (key, fallback) => translations.data?.[key] || labels[key] || fallback || key;
+  const { locale, dictionary } = useAltrixLocale();
+  const tr: Translate = (key, fallback) => dictionary[key] || labels[key] || fallback || key;
   const docs = useListDocuments({ query: { queryKey: getListDocumentsQueryKey(), enabled: !!profile } });
   const feedback = useListMyFeedback({ query: { queryKey: getListMyFeedbackQueryKey(), enabled: !!profile } });
   const uploadUrl = useRequestUploadUrl();
@@ -227,7 +399,6 @@ function PortalPage() {
   const analyze = useAnalyzeDocument();
   const confirm = useConfirmDocument();
   const remove = useDeleteDocument();
-  const updateProfile = useUpdateProfile();
   const createFeedback = useCreateFeedback();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [documentType, setDocumentType] = useState<'prescription' | 'lab_report' | 'discharge_summary' | 'diagnostic_report' | 'other'>('lab_report');
@@ -242,7 +413,6 @@ function PortalPage() {
   const [feedbackRating, setFeedbackRating] = useState(5);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (profile) setLocaleDraft(profile.locale as Locale); }, [profile?.locale]);
   useEffect(() => {
     if (docs.data?.length && (!selectedId || !docs.data.some((d) => d.id === selectedId))) setSelectedId(docs.data[0].id);
   }, [docs.data, selectedId]);
@@ -257,11 +427,6 @@ function PortalPage() {
   }, [selected?.id, selected?.extraction, selected?.summary, selected?.translatedSummary, selected?.summaryLocale, locale]);
 
   const invalidateDocuments = () => queryClient.invalidateQueries({ queryKey: getListDocumentsQueryKey() });
-  const onLocaleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value as Locale;
-    setLocaleDraft(value);
-    updateProfile.mutate({ data: { locale: value } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() }), onError: () => setLocaleDraft(profile?.locale || 'en') });
-  };
   const onUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -307,7 +472,7 @@ function PortalPage() {
     });
   };
   const removeSelected = () => {
-    if (!selected || !window.confirm(`Remove “${selected.fileName}” from your records?`)) return;
+    if (!selected || !window.confirm(deleteConfirmation(locale, selected.fileName))) return;
     remove.mutate({ id: selected.id }, { onSuccess: () => { setSelectedId(null); invalidateDocuments(); } });
   };
   const timelineDocuments = sortDocumentsByEventDate(docs.data || []);
@@ -318,7 +483,7 @@ function PortalPage() {
   if (pageLoading) return <LoadingShell />;
 
   return <AppShell profile={profile} translate={tr}>
-    <div className="welcome-row fade-up"><div><div className="eyebrow">{tr('personal_health_space', 'YOUR PERSONAL HEALTH SPACE')}</div><h1 className="display">{tr('greeting')}{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.</h1><p>{tr('records_together', 'Everything you’ve shared, together in one place.')}</p></div><label className="locale-control"><Languages size={17} /><span className="sr-only">{tr('language')}</span><select aria-label={tr('language')} value={locale} onChange={onLocaleChange} data-testid="select-language">{Object.entries(languages).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select><ChevronDown size={15} /></label></div>
+     <div className="welcome-row fade-up"><div><div className="eyebrow">{tr('personal_health_space', 'YOUR PERSONAL HEALTH SPACE')}</div><h1 className="display">{tr('greeting')}{profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.</h1><p>{tr('records_together', 'Everything you’ve shared, together in one place.')}</p></div><LocaleSelector /></div>
     <div className="urgent-callout"><span className="urgent-icon"><HeartHandshake size={17} /></span><div><b>{tr('gentle_reminder', 'A gentle reminder')}</b><p>{tr('urgent')}</p></div><button onClick={() => setFeedbackOpen(true)} data-testid="button-contact-support"><MessageSquareText size={15} /> {tr('feedback', 'Feedback')}</button></div>
     {docs.isError && <ErrorState retry={() => docs.refetch()} message="Your records couldn’t be loaded. They’re still safe—please try again." />}
     <section className="portal-grid">
@@ -359,7 +524,7 @@ function DocumentTimelineItem({ translate, locale, doc, active, onClick }: { tra
   const documentDate = parseDocumentDate(doc);
   const shownDate = documentDate || new Date(doc.createdAt);
   const dateLabel = documentDate ? translate('document_date', 'Report date') : translate('uploaded', 'Uploaded');
-  return <button className={`timeline-item ${active ? 'selected' : ''}`} onClick={onClick} data-testid={`button-record-${doc.id}`}><span className="timeline-marker">{doc.status === 'confirmed' ? <Check size={13} /> : <FileText size={13} />}</span><span className="timeline-info"><b>{doc.fileName}</b><small>{name[doc.documentType] || 'Health record'} <i>·</i> {dateLabel}: {shownDate.toLocaleDateString(localeTag[locale], { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</small></span><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : doc.status === 'confirmed' ? 'status-confirmed' : ''}`}><i />{status[doc.status] || doc.status}</span></button>;
+  return <button className={`timeline-item ${active ? 'selected' : ''}`} onClick={onClick} data-testid={`button-record-${doc.id}`}><span className="timeline-marker">{doc.status === 'confirmed' ? <Check size={13} /> : <FileText size={13} />}</span><span className="timeline-info"><b data-no-translate>{doc.fileName}</b><small>{name[doc.documentType] || 'Health record'} <i>·</i> {dateLabel}: {shownDate.toLocaleDateString(localeTag[locale], { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</small></span><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : doc.status === 'confirmed' ? 'status-confirmed' : ''}`}><i />{status[doc.status] || doc.status}</span></button>;
 }
 
 type HealthProfileFact = {
@@ -421,8 +586,8 @@ function HealthProfileCard({ translate, locale, documents }: { translate: Transl
     <p className="health-profile-note">{translate('health_profile_safety', 'Only details from records you confirmed appear here. Lab flags are copied from the report; they are not diagnoses.')}</p>
     {visibleGroups.length ? <div className="health-profile-groups">{visibleGroups.map((group) => <section className="health-profile-group" key={group.key}>
       <h3>{group.title}</h3>
-      <ul>{group.facts.sort((a, b) => b.date.getTime() - a.date.getTime()).map((fact) => <li className="health-profile-fact" key={fact.id}>
-        <span><b>{fact.title}</b>{fact.details.length > 0 && <small>{fact.details.join(' · ')}</small>}{fact.uncertain && <em>{translate('verify_against_source', 'Please verify against the original record.')}</em>}</span>
+       <ul>{group.facts.sort((a, b) => b.date.getTime() - a.date.getTime()).map((fact) => <li className="health-profile-fact" key={fact.id}>
+         <span><b data-no-translate>{fact.title}</b>{fact.details.length > 0 && <small data-no-translate>{fact.details.join(' · ')}</small>}{fact.uncertain && <em>{translate('verify_against_source', 'Please verify against the original record.')}</em>}</span>
         <time dateTime={fact.date.toISOString()}>{fact.date.toLocaleDateString(localeTag[locale], { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time>
       </li>)}</ul>
     </section>)}</div> : <p className="health-profile-empty">{translate('health_profile_empty', 'Reviewed medicines, test values, and terms will appear here after you confirm an extracted record.')}</p>}
@@ -494,7 +659,7 @@ function ReviewPanel({ translate, doc, locale, summary, onSummary, extraction, o
     <div className="selected-file"><span className="selected-file-icon"><FileText size={16} /></span><span><b>{doc.fileName}</b><small>{doc.status === 'confirmed' ? translate('patient_confirmed_record', 'Patient-confirmed record') : translate('ai_draft', 'AI extraction is a draft')}</small></span><button aria-label={translate('remove_record', 'Remove this record')} onClick={onDelete} disabled={deleting} className="icon-button" data-testid={`button-delete-${doc.id}`}><Trash2 size={15} /></button></div>
     <div className="draft-alert"><AlertTriangle size={15} /><span><b>{translate('draft_disclaimer', 'Draft only — not a diagnosis or instruction.')}</b><small>{translate('prescription_review_disclaimer', 'Please compare every detail with your original record. Prescription names and doses are not definitive until verified by you and your clinician.')}</small></span></div>
     {doc.extraction || doc.summary || doc.translatedSummary ? <>
-      {needsReview && doc.summary && doc.summaryLocale !== locale && <div className="language-draft-note"><Languages size={14} /><span>This summary is in a different language.</span><button onClick={onAnalyze} disabled={analyzing} data-testid="button-translate-summary">{analyzing ? 'Preparing…' : `Prepare in ${languages[locale]}`}</button></div>}
+      {needsReview && doc.summary && doc.summaryLocale !== locale && <div className="language-draft-note"><Languages size={14} /><span>This summary is in a different language.</span><button onClick={onAnalyze} disabled={analyzing} data-testid="button-translate-summary">{analyzing ? translate('ui::Preparing…', 'Preparing…') : `${translate('ui::Prepare in', 'Prepare in')} ${languages[locale]}`}</button></div>}
       <label className="label review-label" htmlFor="summary-draft">{translate('summary_draft', locale === 'en' ? 'Summary draft' : `${languages[locale]} summary draft`)}</label>
       <textarea id="summary-draft" className="field summary-editor" value={summary || translatedSummary || ''} onChange={(e) => onSummary(e.target.value)} readOnly={!needsReview} placeholder="A patient-friendly draft summary will appear here." data-testid="textarea-summary-draft" />
       <label className="label review-label" htmlFor="extraction-draft">{translate('extracted_details', 'Extracted details')} <span>({translate('editable', 'editable')})</span></label>
@@ -521,6 +686,7 @@ function FeedbackCard({ translate, open, setOpen, items, loading, failed, messag
 
 function AdminPage() {
   const queryClient = useQueryClient();
+  const { locale, dictionary } = useAltrixLocale();
   const { data: profile, isLoading: profileLoading, isError, refetch } = useGetProfile();
   const [view, setView] = useState<'overview' | 'patients' | 'documents' | 'feedback'>('overview');
   const admin = profile?.role === 'admin';
@@ -544,22 +710,22 @@ function AdminPage() {
     <div className="admin-tabs" role="tablist">{tabs.map((tab) => <button role="tab" aria-selected={view === tab.key} className={view === tab.key ? 'active' : ''} key={tab.key} onClick={() => { setView(tab.key); setSearch(''); }} data-testid={`tab-admin-${tab.key}`}>{tab.icon}{tab.title}</button>)}</div>
     {error && <ErrorState retry={retry} message="Some admin data couldn’t be loaded. Check your access or try again." />}
     {loading && <AdminSkeleton />}
-    {!loading && !error && view === 'overview' && overview.data && <AdminOverviewView data={overview.data} />}
+    {!loading && !error && view === 'overview' && overview.data && <AdminOverviewView data={overview.data} locale={locale} dictionary={dictionary} />}
     {!loading && !error && view !== 'overview' && <div className="admin-table-card soft-card"><div className="admin-table-heading"><div><div className="eyebrow">ALTRIX OPERATIONS</div><h2 className="display">{view === 'patients' ? 'Patients' : view === 'documents' ? 'Documents' : 'Patient feedback'}</h2></div><input className="field admin-search" type="search" placeholder="Search this view" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search admin records" data-testid="input-admin-search" /></div>
-      {view === 'patients' && <div className="table-scroll"><table><thead><tr><th>Patient</th><th>Language</th><th>Joined</th><th>Records</th></tr></thead><tbody>{patientRows.map((p) => <tr key={p.id}><td><b>{p.name || 'Patient'}</b><small>{p.email}</small></td><td>{languages[p.locale as Locale] || p.locale}</td><td>{new Date(p.createdAt).toLocaleDateString()}</td><td><span className="table-count">{p.documentCount}</span></td></tr>)}</tbody></table>{!patientRows.length && <AdminEmpty />}</div>}
-      {view === 'documents' && <div className="table-scroll"><table><thead><tr><th>Document</th><th>Patient</th><th>Type</th><th>Status</th><th>Added</th></tr></thead><tbody>{documentRows.map((doc) => <tr key={doc.id}><td><b>{doc.fileName}</b><small>{doc.id}</small></td><td><b>{doc.patientName}</b><small>{doc.patientEmail}</small></td><td>{humanType(doc.documentType)}</td><td><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : ''}`}><i />{humanStatus(doc.status)}</span></td><td>{new Date(doc.createdAt).toLocaleDateString()}</td></tr>)}</tbody></table>{!documentRows.length && <AdminEmpty />}</div>}
-      {view === 'feedback' && <div className="admin-feedback-list">{feedbackRows.map((item) => <article className="admin-feedback-row" key={item.id}><div className="admin-feedback-top"><span className="category-chip">{item.category}</span><span className="feedback-score">{item.rating ? `${item.rating} / 5` : 'No rating'}</span></div><p>{item.message}</p><div className="admin-feedback-person">{item.patientName} <i>·</i> {item.patientEmail}<time>{new Date(item.createdAt).toLocaleDateString()}</time></div></article>)}{!feedbackRows.length && <AdminEmpty />}</div>}
+       {view === 'patients' && <div className="table-scroll"><table><thead><tr><th>Patient</th><th>Language</th><th>Joined</th><th>Records</th></tr></thead><tbody>{patientRows.map((p) => <tr key={p.id}><td><b data-no-translate>{p.name || 'Patient'}</b><small data-no-translate>{p.email}</small></td><td>{languages[p.locale as Locale] || p.locale}</td><td>{new Date(p.createdAt).toLocaleDateString(localeTag[locale])}</td><td><span className="table-count">{p.documentCount}</span></td></tr>)}</tbody></table>{!patientRows.length && <AdminEmpty />}</div>}
+       {view === 'documents' && <div className="table-scroll"><table><thead><tr><th>Document</th><th>Patient</th><th>Type</th><th>Status</th><th>Added</th></tr></thead><tbody>{documentRows.map((doc) => <tr key={doc.id}><td><b data-no-translate>{doc.fileName}</b><small data-no-translate>{doc.id}</small></td><td><b data-no-translate>{doc.patientName}</b><small data-no-translate>{doc.patientEmail}</small></td><td>{humanType(doc.documentType, dictionary)}</td><td><span className={`status-chip ${doc.requiresReview || doc.status === 'review_required' ? 'status-review' : ''}`}><i />{humanStatus(doc.status, dictionary)}</span></td><td>{new Date(doc.createdAt).toLocaleDateString(localeTag[locale])}</td></tr>)}</tbody></table>{!documentRows.length && <AdminEmpty />}</div>}
+       {view === 'feedback' && <div className="admin-feedback-list">{feedbackRows.map((item) => <article className="admin-feedback-row" key={item.id}><div className="admin-feedback-top"><span className="category-chip">{dictionary[item.category] || item.category}</span><span className="feedback-score">{item.rating ? `${item.rating} / 5` : dictionary['ui::No rating'] || 'No rating'}</span></div><p data-no-translate>{item.message}</p><div className="admin-feedback-person"><span data-no-translate>{item.patientName}</span> <i>·</i> <span data-no-translate>{item.patientEmail}</span><time>{new Date(item.createdAt).toLocaleDateString(localeTag[locale])}</time></div></article>)}{!feedbackRows.length && <AdminEmpty />}</div>}
     </div>}
     <div className="admin-access-note"><LockKeyhole size={14} /> Access to this area is verified by the Altrix server. This interface does not grant privileges.</div>
   </AppShell>;
 }
 
-function AdminOverviewView({ data }: { data: { totalPatients: number; activeThisMonth: number; totalDocuments: number; pendingReviews: number; averageRating: number; feedbackCount: number; monthlyUsers: { month: string; count: number }[]; documentTypes: { type: string; count: number }[] } }) {
+function AdminOverviewView({ data, locale, dictionary }: { data: { totalPatients: number; activeThisMonth: number; totalDocuments: number; pendingReviews: number; averageRating: number; feedbackCount: number; monthlyUsers: { month: string; count: number }[]; documentTypes: { type: string; count: number }[] }; locale: Locale; dictionary: Record<string, string> }) {
   const max = Math.max(1, ...data.monthlyUsers.map((m) => m.count));
   return <div className="admin-overview">
     <div className="admin-stats"><MetricCard label="Total patients" value={data.totalPatients} sub={`${data.activeThisMonth} active this month`} icon={<Users size={18} />} tone="mint" /><MetricCard label="Health records" value={data.totalDocuments} sub="Across all patient accounts" icon={<FileText size={18} />} tone="peach" /><MetricCard label="Review needed" value={data.pendingReviews} sub="Patient confirmation pending" icon={<Clock3 size={18} />} tone="gold" /><MetricCard label="Patient rating" value={data.averageRating ? data.averageRating.toFixed(1) : '—'} sub={`${data.feedbackCount} feedback notes`} icon={<HeartHandshake size={18} />} tone="sage" /></div>
-    <div className="admin-chart-grid"><section className="chart-panel soft-card"><div className="chart-heading"><div><div className="eyebrow">PATIENT ACTIVITY</div><h2 className="display">A growing circle.</h2></div><span className="chart-legend"><i /> New patients</span></div><div className="bar-chart">{data.monthlyUsers.length ? data.monthlyUsers.map((item) => <div className="bar-column" key={item.month}><div className="bar-value">{item.count || ''}</div><div className="bar-track"><span style={{ height: `${Math.max(5, item.count / max * 100)}%` }} /></div><small>{item.month}</small></div>) : <AdminEmpty />}</div></section>
-      <section className="chart-panel soft-card"><div className="eyebrow">RECORD MIX</div><h2 className="display">What patients bring.</h2><div className="type-breakdown">{data.documentTypes.length ? data.documentTypes.map((item, i) => <div className="type-row" key={item.type}><span className={`type-dot dot-${i % 4}`} /><span>{humanType(item.type)}</span><b>{item.count}</b></div>) : <AdminEmpty />}</div></section></div>
+     <div className="admin-chart-grid"><section className="chart-panel soft-card"><div className="chart-heading"><div><div className="eyebrow">PATIENT ACTIVITY</div><h2 className="display">A growing circle.</h2></div><span className="chart-legend"><i /> New patients</span></div><div className="bar-chart">{data.monthlyUsers.length ? data.monthlyUsers.map((item) => <div className="bar-column" key={item.month}><div className="bar-value">{item.count || ''}</div><div className="bar-track"><span style={{ height: `${Math.max(5, item.count / max * 100)}%` }} /></div><small>{formatMonth(item.month, locale)}</small></div>) : <AdminEmpty />}</div></section>
+      <section className="chart-panel soft-card"><div className="eyebrow">RECORD MIX</div><h2 className="display">What patients bring.</h2><div className="type-breakdown">{data.documentTypes.length ? data.documentTypes.map((item, i) => <div className="type-row" key={item.type}><span className={`type-dot dot-${i % 4}`} /><span>{humanType(item.type, dictionary)}</span><b>{item.count}</b></div>) : <AdminEmpty />}</div></section></div>
     <section className="admin-insight"><span><Sparkles size={17} /></span><p><b>Patient-led by design.</b> Extraction and summary content remain drafts until a patient has reviewed and confirmed them.</p></section>
   </div>;
 }
@@ -569,8 +735,31 @@ function MetricCard({ label, value, sub, icon, tone }: { label: string; value: n
 }
 function AdminSkeleton() { return <div className="admin-stats">{[0, 1, 2, 3].map((n) => <div className="metric-card soft-card" key={n}><i className="muted-skeleton" /><i className="muted-skeleton" /><i className="muted-skeleton" /></div>)}</div>; }
 function AdminEmpty() { return <div className="admin-empty"><span><FileText size={19} /></span><b>No matching records</b><p>Try another search, or come back when there’s more to see.</p></div>; }
-function humanType(type: string) { return ({ prescription: 'Prescription', lab_report: 'Lab report', discharge_summary: 'Discharge summary', diagnostic_report: 'Diagnostic report', other: 'Other' } as Record<string, string>)[type] || type.replaceAll('_', ' '); }
-function humanStatus(status: string) { return ({ uploaded: 'Added', processing: 'Processing', review_required: 'Review required', confirmed: 'Confirmed by patient', failed: 'Failed' } as Record<string, string>)[status] || status; }
+function humanType(type: string, dictionary: Record<string, string>) {
+  const keys: Record<string, string> = { prescription: 'prescription', lab_report: 'lab_report', discharge_summary: 'discharge_summary', diagnostic_report: 'diagnostic_report', other: 'other' };
+  const fallback = ({ prescription: 'Prescription', lab_report: 'Lab report', discharge_summary: 'Discharge summary', diagnostic_report: 'Diagnostic report', other: 'Other' } as Record<string, string>)[type] || type.replaceAll('_', ' ');
+  return dictionary[keys[type]] || dictionary[`ui::${fallback}`] || fallback;
+}
+function humanStatus(status: string, dictionary: Record<string, string>) {
+  const labels: Record<string, string> = { uploaded: 'Added', processing: 'Processing', review_required: 'Review required', confirmed: 'Confirmed by patient', failed: 'Failed' };
+  const fallback = labels[status] || status;
+  return dictionary[`ui::${fallback}`] || fallback;
+}
+function formatMonth(value: string, locale: Locale) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return value;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
+  return new Intl.DateTimeFormat(localeTag[locale], { month: 'short', timeZone: 'UTC' }).format(date);
+}
+function deleteConfirmation(locale: Locale, fileName: string) {
+  const messages: Record<Locale, (file: string) => string> = {
+    en: (file) => `Remove “${file}” from your records?`,
+    hi: (file) => `“${file}” को अपने रिकॉर्ड से हटाएँ?`,
+    ta: (file) => `“${file}” பதிவுகளிலிருந்து நீக்கவா?`,
+    te: (file) => `“${file}” ను మీ రికార్డుల నుంచి తొలగించాలా?`,
+  };
+  return messages[locale](fileName);
+}
 
 function RequirePatient() {
   const auth = useAuth();
@@ -633,10 +822,17 @@ function AppRouter() {
 
 function ClerkApp() {
   const [, setLocation] = useLocation();
+  const { locale } = useLocaleState();
   if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+  const clerkCopy = {
+    en: { signInTitle: 'Welcome back', signInSubtitle: 'Your health story is right where you left it.', signUpTitle: 'Make space for your health', signUpSubtitle: 'Create your private Altrix account.' },
+    hi: { signInTitle: 'वापसी पर स्वागत है', signInSubtitle: 'आपकी स्वास्थ्य यात्रा वहीं से शुरू होती है जहाँ आपने छोड़ी थी।', signUpTitle: 'अपने स्वास्थ्य के लिए जगह बनाएँ', signUpSubtitle: 'अपना निजी Altrix खाता बनाएँ।' },
+    ta: { signInTitle: 'மீண்டும் வரவேற்கிறோம்', signInSubtitle: 'உங்கள் ஆரோக்கியப் பயணம் விட்ட இடத்திலிருந்து தொடர்கிறது.', signUpTitle: 'உங்கள் ஆரோக்கியத்திற்கு இடமளியுங்கள்', signUpSubtitle: 'உங்கள் தனிப்பட்ட Altrix கணக்கை உருவாக்குங்கள்.' },
+    te: { signInTitle: 'తిరిగి స్వాగతం', signInSubtitle: 'మీ ఆరోగ్య ప్రయాణం మీరు ఆపిన చోటు నుంచే కొనసాగుతుంది.', signUpTitle: 'మీ ఆరోగ్యానికి చోటు కల్పించండి', signUpSubtitle: 'మీ వ్యక్తిగత Altrix ఖాతాను సృష్టించండి.' },
+  }[locale];
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={import.meta.env.VITE_CLERK_PROXY_URL} appearance={clerkAppearance}
     signInUrl={`${basePath}/patient/login`} signUpUrl={`${basePath}/patient/register`}
-    localization={{ signIn: { start: { title: 'Welcome back', subtitle: 'Your health story is right where you left it.' } }, signUp: { start: { title: 'Make space for your health', subtitle: 'Create your private Altrix account.' } } }}
+    localization={{ signIn: { start: { title: clerkCopy.signInTitle, subtitle: clerkCopy.signInSubtitle } }, signUp: { start: { title: clerkCopy.signUpTitle, subtitle: clerkCopy.signUpSubtitle } } }}
     routerPush={(to) => setLocation(stripBase(to))}
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}>
     <IdentityScopedApp />
@@ -646,11 +842,16 @@ function ClerkApp() {
 function IdentityScopedApp() {
   const { isLoaded, userId } = useAuth();
   const queryClient = useMemo(() => new QueryClient(), [isLoaded, userId]);
-  return <QueryClientProvider client={queryClient}><TooltipProvider><AppRouter /><Toaster /></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><LocaleTranslationsProvider><TooltipProvider><AppRouter /><Toaster /></TooltipProvider></LocaleTranslationsProvider></QueryClientProvider>;
 }
 
 function App() {
-  return <WouterRouter base={basePath}><ClerkApp /></WouterRouter>;
+  const [locale, setLocale] = useState<Locale>(() => {
+    const saved = localStorage.getItem(localeStorageKey);
+    return isLocale(saved) ? saved : 'en';
+  });
+  const localeState = useMemo(() => ({ locale, setLocale }), [locale]);
+  return <LocaleStateContext.Provider value={localeState}><WouterRouter base={basePath}><ClerkApp /></WouterRouter></LocaleStateContext.Provider>;
 }
 
 export default App;

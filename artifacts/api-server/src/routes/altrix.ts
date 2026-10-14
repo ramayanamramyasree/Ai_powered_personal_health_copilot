@@ -34,6 +34,7 @@ import {
 } from "@workspace/db";
 import { requireAdmin, requirePatient, requireSignedIn, type AltrixRequest } from "../lib/altrixAuth";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { uiTextCatalog } from "../i18n/uiTextCatalog";
 
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
@@ -285,6 +286,20 @@ const translationSeed: Record<(typeof locales)[number], Record<string, string>> 
   },
 };
 
+for (const locale of locales) {
+  for (const [key, source] of Object.entries(translationSeed.en)) {
+    const uiKey = `ui::${source}`;
+    if (!translationSeed[locale][uiKey]) {
+      translationSeed[locale][uiKey] = locale === "en" ? source : translationSeed[locale][key];
+    }
+  }
+  for (const [source, translations] of Object.entries(uiTextCatalog)) {
+    const value = locale === "en" ? source : translations[locale];
+    if (!value) throw new Error(`Missing ${locale} UI translation for ${source}`);
+    translationSeed[locale][`ui::${source}`] = value;
+  }
+}
+
 function asRequest(req: Parameters<typeof requirePatient>[0]) {
   return req as AltrixRequest;
 }
@@ -377,7 +392,7 @@ router.get("/profile", requireSignedIn, async (req, res): Promise<void> => {
   );
 });
 
-router.put("/profile", requirePatient, async (req, res): Promise<void> => {
+router.put("/profile", requireSignedIn, async (req, res): Promise<void> => {
   const parsed = UpdateProfileBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid language preference" });

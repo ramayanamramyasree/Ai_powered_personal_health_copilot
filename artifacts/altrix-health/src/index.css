@@ -126,6 +126,8 @@
 .landing-links a:hover, .nav-signin:hover { color: hsl(var(--primary)); }
 .nav-actions { display: flex; align-items: center; gap: 22px; }
 .nav-cta { font-size: 12px; padding: .67rem 1rem; }
+.locale-control-compact { height: 35px; gap: 6px; padding-inline: 10px; }
+.auth-locale-control { width: min(440px, 100%); display: flex; justify-content: flex-end; margin: 0 auto 12px; }
 .hero { min-height: 606px; position: relative; display: grid; grid-template-columns: 1fr .94fr; align-items: center; padding-top: 3px; padding-bottom: 58px; }
 .hero-copy { padding: 26px 0 33px; position: relative; z-index: 1; }
 .hero-kicker { display: flex; align-items: center; gap: 9px; }
@@ -202,6 +204,17 @@
 @media (max-width: 760px) {
   .login-choice-nav { min-height: 72px; }.login-choice-content { padding-top: 28px; padding-bottom: 46px; }.login-choice-heading h1 { font-size: 44px; }.login-choice-cards { grid-template-columns: 1fr; gap: 12px; margin-top: 25px; }.login-choice-card { min-height: 0; padding: 23px; }.login-choice-card p { margin-bottom: 18px; }.login-choice-foot { margin-top: 14px; }.login-choice-privacy { margin-top: 21px; }
   .auth-mode-title { text-align: left; margin-bottom: 20px; }.auth-denied { padding: 24px; }.auth-denied h1 { font-size: 25px; }
+}
+@media (max-width: 760px) {
+  .landing-nav { gap: 8px; }
+  .landing-nav .nav-actions { flex: 0 0 auto; gap: 7px; }
+  .landing-nav .nav-signin { flex: 0 0 auto; white-space: nowrap; }
+  .landing-nav .locale-control-compact { gap: 4px; padding-inline: 7px; }
+  .landing-nav .locale-control-compact select { max-width: 52px; }
+  .landing-nav .nav-cta { flex: 0 0 auto; padding-inline: .6rem; font-size: 9px; white-space: nowrap; }
+  .login-choice-nav .nav-actions { gap: 10px; flex: 0 0 auto; }
+  .login-choice-nav .login-back-link { white-space: nowrap; }
+  .auth-locale-control { margin-bottom: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
 .language-draft-note { display: flex; align-items: center; gap: 7px; color: #7c806f; font-size: 8px; padding: 8px 9px; border-radius: 9px; background: #eceade; margin: 1px 0 10px; }
