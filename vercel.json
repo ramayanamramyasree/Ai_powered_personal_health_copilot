@@ -1,0 +1,18 @@
+<escape>{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "altrix-health": {
+      "root": "artifacts/altrix-health",
+      "framework": "vite"
+    },
+    "api-server": {
+      "root": "artifacts/api-server",
+      "framework": "express"
+    },
+    "mockup-sandbox": {
+      "root": "artifacts/mockup-sandbox",
+      "framework": "vite"
+    }
+  },
+  "rewrites": []
+}</escape>
